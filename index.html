@@ -86,6 +86,7 @@ td.n,th.n{text-align:right}
       <button id="bPdf" class="sec" disabled>Descargar PDF</button>
       <button id="bXls" class="sec" disabled>Descargar XLS</button>
       <button id="bDet" class="sec" disabled>Descargar detalle del pedido</button>
+      <button id="bPla" class="sec" disabled>Descargar PLANTILLA_PEDIDOS (.xls)</button>
     </div>
     <div id="res" class="hide">
       <div class="kpis" style="margin-top:14px" id="kpis"></div>
@@ -99,7 +100,7 @@ td.n,th.n{text-align:right}
 <script>
 const SHEET_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTv7UOlzavB9YZqWbwzrTyIrL5uuM8Zs69Xjpdf3nl8HAN8zBJ1R6ADyale7RiS_n5cg7tvhu4FiWeJ/pub?gid=0&single=true&output=csv';
 const $=id=>document.getElementById(id);
-let VOL={}, PED=[], LPNS=[], ERR=[];
+let VOL={}, PED=[], LPNS=[], ERR=[], COLS=[];
 const norm=v=>String(v==null?'':v).trim().toUpperCase();
 const num=v=>{const n=parseFloat(String(v==null?'':v).replace(',','.'));return isNaN(n)?0:n};
 const MES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
@@ -158,6 +159,7 @@ $('fVol').onchange=async e=>{const f=e.target.files[0];if(!f)return;
 $('fPed').onchange=async e=>{const f=e.target.files[0];if(!f)return;
   try{const rows=await readSheet(f);
     if(!rows.length||!('ORDEN' in rows[0])||!('PRODUCTO' in rows[0])||!('CANTIDAD' in rows[0]))throw new Error('Faltan las columnas ORDEN / PRODUCTO / CANTIDAD');
+    COLS=Object.keys(rows[0]);
     PED=rows.filter(r=>norm(r.PRODUCTO)&&num(r.CANTIDAD)>0);
     const ords=new Set(PED.map(r=>r.ORDEN));
     $('stPed').textContent=PED.length+' líneas en '+ords.size+' orden(es).';$('stPed').className='st ok';refresh()}
@@ -203,12 +205,12 @@ function render(cap){
   $('lpns').innerHTML=LPNS.map(l=>{
     const pct=Math.min(100,l.vol/cap*100);
     return '<div class="lpn"><div class="lpn-h"><div>'+l.lpn+' <span>Orden '+l.orden+' · bulto '+l.n+' de '+l.of+'</span></div><div>'+l.vol.toFixed(4)+' / '+cap+' <span>('+pct.toFixed(1)+'%)</span></div></div><div class="fill"><i style="width:'+pct+'%"></i></div>'+
-    '<div class="tw"><table><thead><tr><th>Producto</th><th>Descripción</th><th class="n">Unidades</th><th class="n">Volumen</th></tr></thead><tbody>'+
-    l.lines.map(x=>'<tr><td>'+x.code+(x.parte?' <small style="color:var(--warn)">(parcial)</small>':'')+'</td><td>'+(x.r.DESCRIPCION||'')+'</td><td class="n">'+x.units+'</td><td class="n">'+x.vol.toFixed(5)+'</td></tr>').join('')+'</tbody></table></div></div>'}).join('');
+    '<div class="tw"><table><thead><tr><th>Producto</th><th>Descripción</th><th class="n">Vol. unitario</th><th class="n">Unidades</th><th class="n">Volumen (unit. × unid.)</th></tr></thead><tbody>'+
+    l.lines.map(x=>'<tr><td>'+x.code+(x.parte?' <small style="color:var(--warn)">(parcial)</small>':'')+'</td><td>'+(x.r.DESCRIPCION||'')+'</td><td class="n">'+volDe(x.code)+'</td><td class="n">'+x.units+'</td><td class="n">'+x.vol.toFixed(5)+'</td></tr>').join('')+'</tbody></table></div></div>'}).join('');
   const m=codigoLpn();
   $('resumen').innerHTML=m.length?'<h2 style="margin:0 0 8px;font-size:15px">Códigos por LPN</h2><div class="tw"><table><thead><tr><th>Orden</th><th>Producto</th><th>Descripción</th><th class="n">Total</th><th>LPN (unidades)</th></tr></thead><tbody>'+
     m.map(x=>'<tr><td>'+x.orden+'</td><td>'+x.code+'</td><td>'+x.desc+'</td><td class="n">'+x.total+'</td><td>'+x.lpns+'</td></tr>').join('')+'</tbody></table></div>':'';
-  $('bPdf').disabled=$('bXls').disabled=$('bDet').disabled=!LPNS.length;
+  $('bPdf').disabled=$('bXls').disabled=$('bDet').disabled=$('bPla').disabled=!LPNS.length;
 }
 
 function codigoLpn(){
@@ -295,7 +297,21 @@ function detalle(){
   XLSX.writeFile(wb,'DETALLE_PEDIDOS_LPN.xls',{bookType:'biff8'});
 }
 
-$('bCalc').onclick=calcular;$('bPdf').onclick=pdf;$('bXls').onclick=xls;$('bDet').onclick=detalle;
+// Mismo formato (columnas y orden) del archivo PLANTILLA_PEDIDOS cargado, una fila por línea dentro de cada LPN
+function plantilla(){
+  const out=[];
+  LPNS.forEach(l=>l.lines.forEach(x=>{
+    const o={};COLS.forEach(c=>o[c]=x.r[c]);
+    o.CANTIDAD=x.units;
+    if('LPN' in o)o.LPN=l.lpn;
+    out.push(o);
+  }));
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(out,{header:COLS}),'PLANTILLA_PEDIDOS');
+  XLSX.writeFile(wb,'PLANTILLA_PEDIDOS.xls',{bookType:'biff8'});
+}
+
+$('bCalc').onclick=calcular;$('bPdf').onclick=pdf;$('bXls').onclick=xls;$('bDet').onclick=detalle;$('bPla').onclick=plantilla;
 refresh();
 cargarSheet();
 </script>
