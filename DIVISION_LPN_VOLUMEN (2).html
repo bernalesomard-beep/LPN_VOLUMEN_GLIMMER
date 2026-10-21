@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>División por LPN según volumen</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+<style>
+:root{--bg:#f3f4f7;--card:#fff;--ink:#1d2433;--mute:#667085;--line:#dfe3ea;--red:#c8102e;--ok:#1a7f4b;--warn:#b54708}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+header{background:var(--ink);color:#fff;padding:16px 24px;display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+header h1{margin:0;font-size:19px;font-weight:600}
+header span{color:#b9c0d0;font-size:13px}
+main{max-width:1100px;margin:0 auto;padding:20px;display:grid;gap:16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px}
+.card h2{margin:0 0 10px;font-size:15px}
+.step{display:inline-block;background:var(--red);color:#fff;border-radius:50%;width:22px;height:22px;text-align:center;line-height:22px;font-size:12px;margin-right:6px}
+input[type=file]{width:100%;margin:6px 0}
+label{display:block;margin:8px 0 3px;color:var(--mute);font-size:12px}
+input[type=text],input[type=number]{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:6px;font:inherit}
+.row{display:flex;gap:10px}.row>div{flex:1}
+.chk{display:flex;gap:8px;align-items:center;margin-top:10px;color:var(--ink);font-size:13px}
+.st{margin-top:8px;font-size:12.5px;color:var(--mute)}
+.st.ok{color:var(--ok)}
+.st.err{color:var(--warn)}
+details{margin-top:10px;font-size:12.5px;color:var(--mute)}
+summary{cursor:pointer}
+button{font:inherit;padding:9px 16px;border:0;border-radius:6px;cursor:pointer;background:var(--red);color:#fff;font-weight:600}
+button.sec{background:#fff;color:var(--ink);border:1px solid var(--line)}
+button:disabled{opacity:.4;cursor:not-allowed}
+button:focus-visible,input:focus-visible{outline:2px solid #2f6fed;outline-offset:2px}
+.bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.kpis{display:flex;gap:22px;flex-wrap:wrap}
+.kpis b{display:block;font-size:20px}.kpis small{color:var(--mute)}
+.alert{background:#fff4e5;border:1px solid #f5c98a;color:var(--warn);border-radius:6px;padding:10px 12px;font-size:13px}
+.alert ul{margin:4px 0 0 18px;padding:0}
+.lpn{border:1px solid var(--line);border-radius:8px;margin-top:12px;overflow:hidden}
+.lpn-h{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;background:#f7f8fa;padding:9px 12px;font-weight:600}
+.lpn-h span{font-weight:400;color:var(--mute)}
+.fill{height:6px;background:#e8ebf1}.fill i{display:block;height:100%;background:var(--ok)}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:6px 12px;text-align:left;border-top:1px solid var(--line);white-space:nowrap}
+th{color:var(--mute);font-weight:500;font-size:12px}
+td.n,th.n{text-align:right}
+.hide{display:none}
+</style>
+</head>
+<body>
+<header><h1>División por LPN según volumen</h1><span>Pedido + volúmenes (Google Sheets) → LPN → PDF Picking Standard</span></header>
+<main>
+  <div class="grid">
+    <section class="card">
+      <h2><span class="step">1</span>Detalle del pedido</h2>
+      <input type="file" id="fPed" accept=".xls,.xlsx" aria-label="Archivo de pedido">
+      <div class="st" id="stPed">Columnas esperadas: ORDEN, PRODUCTO, CANTIDAD y datos de cabecera (PLANTILLA_PEDIDOS).</div>
+    </section>
+    <section class="card">
+      <h2><span class="step">2</span>Maestra de volúmenes</h2>
+      <div class="st" id="stVol" style="margin-top:0">Cargando desde Google Sheets…</div>
+      <div class="bar" style="margin-top:10px"><button class="sec" id="bSheet">Actualizar desde Google Sheets</button></div>
+      <details>
+        <summary>Cargar un archivo manualmente (opcional)</summary>
+        <input type="file" id="fVol" accept=".xls,.xlsx,.csv" aria-label="Archivo de volúmenes">
+        <div>Columnas: IPROD (código) e IVULI (volumen unitario).</div>
+      </details>
+    </section>
+    <section class="card">
+      <h2><span class="step">3</span>Parámetros</h2>
+      <div class="row">
+        <div><label for="cap">Volumen por LPN</label><input type="number" id="cap" value="0.1033" step="0.0001" min="0"></div>
+        <div><label for="pre">Prefijo LPN</label><input type="text" id="pre" value="" placeholder="(opcional)"></div>
+        <div><label for="ini">Primer LPN</label><input type="number" id="ini" value="1" min="1"></div>
+      </div>
+      <div class="st">Un código va completo en un solo LPN. Solo si supera el volumen de un LPN se parte, en múltiplos del factor de empaque (cajas completas).</div>
+    </section>
+  </div>
+
+  <section class="card">
+    <div class="bar">
+      <button id="bCalc" disabled>Dividir en LPN</button>
+      <button id="bPdf" class="sec" disabled>Descargar PDF</button>
+      <button id="bXls" class="sec" disabled>Descargar XLS</button>
+      <button id="bDet" class="sec" disabled>Descargar detalle del pedido</button>
+    </div>
+    <div id="res" class="hide">
+      <div class="kpis" style="margin-top:14px" id="kpis"></div>
+      <div id="alerts"></div>
+      <div class="lpn" style="padding:12px" id="resumen"></div>
+      <div id="lpns"></div>
+    </div>
+  </section>
+</main>
+
+<script>
+const SHEET_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTv7UOlzavB9YZqWbwzrTyIrL5uuM8Zs69Xjpdf3nl8HAN8zBJ1R6ADyale7RiS_n5cg7tvhu4FiWeJ/pub?gid=0&single=true&output=csv';
+const $=id=>document.getElementById(id);
+let VOL={}, PED=[], LPNS=[], ERR=[];
+const norm=v=>String(v==null?'':v).trim().toUpperCase();
+const num=v=>{const n=parseFloat(String(v==null?'':v).replace(',','.'));return isNaN(n)?0:n};
+const MES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+function d8(v){const s=String(v||'').replace(/\D/g,'');return s.length===8?s.slice(6,8)+'/'+s.slice(4,6)+'/'+s.slice(2,4):String(v||'')}
+function exp8(v){const s=String(v||'').replace(/\D/g,'');return s.length===8?MES[+s.slice(4,6)-1]+'.-'+s.slice(2,4):String(v||'')}
+function f2(n){return Number(n).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2})}
+function readSheet(file){return new Promise((ok,ko)=>{const r=new FileReader();
+  r.onload=e=>{try{const wb=XLSX.read(e.target.result,{type:'array'});ok(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''}))}catch(x){ko(x)}};
+  r.onerror=ko;r.readAsArrayBuffer(file)})}
+
+// Busca el volumen de un código; si no aparece tal cual, prueba con/sin el prefijo "GY" de la maestra
+function volDe(code){
+  if(Object.prototype.hasOwnProperty.call(VOL,code))return VOL[code];
+  if(code.startsWith('GY')&&Object.prototype.hasOwnProperty.call(VOL,code.slice(2)))return VOL[code.slice(2)];
+  if(Object.prototype.hasOwnProperty.call(VOL,'GY'+code))return VOL['GY'+code];
+  return undefined;
+}
+
+function setVol(rows,origen){
+  const nv={};let n=0;
+  rows.forEach(r=>{const c=norm(r.IPROD),v=num(r.IVULI);if(c){nv[c]=v;n++}});
+  VOL=nv;
+  $('stVol').textContent=n+' códigos cargados ('+origen+').';
+  $('stVol').className='st ok';
+  try{localStorage.setItem('lpn_vol',JSON.stringify(VOL))}catch(e){}
+  refresh();
+}
+
+// Carga desde Google Sheets (CSV publicado)
+async function cargarSheet(){
+  $('stVol').textContent='Cargando desde Google Sheets…';$('stVol').className='st';
+  $('bSheet').disabled=true;
+  try{
+    const res=await fetch(SHEET_URL+'&t='+Date.now(),{cache:'no-store'});
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const txt=await res.text();
+    const wb=XLSX.read(txt,{type:'string',raw:true});
+    const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});
+    if(!rows.length||!('IPROD' in rows[0])||!('IVULI' in rows[0]))throw new Error('el Sheet no tiene las columnas IPROD / IVULI');
+    setVol(rows,'Google Sheets, '+new Date().toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'}));
+  }catch(x){
+    const n=Object.keys(VOL).length;
+    $('stVol').textContent='No se pudo leer el Google Sheet ('+x.message+').'+(n?' Se usan los '+n+' códigos guardados de la sesión anterior.':' Puedes cargar un archivo manualmente.');
+    $('stVol').className='st err';
+    refresh();
+  }
+  $('bSheet').disabled=false;
+}
+
+try{const s=localStorage.getItem('lpn_vol');if(s)VOL=JSON.parse(s)}catch(e){}
+
+$('bSheet').onclick=cargarSheet;
+$('fVol').onchange=async e=>{const f=e.target.files[0];if(!f)return;
+  try{const rows=await readSheet(f);if(!rows.length||!('IPROD' in rows[0])||!('IVULI' in rows[0]))throw new Error('Faltan las columnas IPROD / IVULI');setVol(rows,'archivo manual')}
+  catch(x){$('stVol').textContent='No se pudo leer: '+x.message;$('stVol').className='st err'}};
+$('fPed').onchange=async e=>{const f=e.target.files[0];if(!f)return;
+  try{const rows=await readSheet(f);
+    if(!rows.length||!('ORDEN' in rows[0])||!('PRODUCTO' in rows[0])||!('CANTIDAD' in rows[0]))throw new Error('Faltan las columnas ORDEN / PRODUCTO / CANTIDAD');
+    PED=rows.filter(r=>norm(r.PRODUCTO)&&num(r.CANTIDAD)>0);
+    const ords=new Set(PED.map(r=>r.ORDEN));
+    $('stPed').textContent=PED.length+' líneas en '+ords.size+' orden(es).';$('stPed').className='st ok';refresh()}
+  catch(x){$('stPed').textContent='No se pudo leer: '+x.message;$('stPed').className='st'}};
+function refresh(){$('bCalc').disabled=!(PED.length&&Object.keys(VOL).length)}
+
+function calcular(){
+  const cap=num($('cap').value),pre=$('pre').value.trim(),ini=Math.max(1,parseInt($('ini').value)||1),E=1e-9;
+  LPNS=[];ERR=[];let seq=ini;
+  const orders=[];const idx={};
+  PED.forEach(r=>{const k=String(r.ORDEN);if(!(k in idx)){idx[k]=orders.length;orders.push({k,rows:[]})}orders[idx[k]].rows.push(r)});
+  orders.forEach(o=>{
+    const head=o.rows[0];let cur=null;
+    const nuevo=()=>{cur={orden:o.k,head,lpn:pre+String(seq++).padStart(6,'0'),lines:[],vol:0};LPNS.push(cur)};
+    o.rows.forEach(r=>{
+      const code=norm(r.PRODUCTO),uv=volDe(code);
+      if(uv===undefined){ERR.push('Orden '+o.k+': el código '+code+' no está en la maestra de volúmenes (no se incluyó).');return}
+      if(!(uv>0)){ERR.push('Orden '+o.k+': el código '+code+' tiene volumen 0 en la maestra (no se incluyó).');return}
+      const f=Math.max(1,num(r['FACTOR DE EMPAQUE'])||1);
+      let u=num(r.CANTIDAD);const maxU=Math.floor((cap+E)/uv);let partido=false;
+      while(u>0){
+        if(!cur)nuevo();
+        const fit=Math.floor((cap-cur.vol+E)/uv);
+        if(fit>=u){cur.lines.push({r,code,units:u,vol:u*uv,parte:partido});cur.vol+=u*uv;u=0;break}
+        if(maxU>=u&&cur.lines.length){nuevo();continue}          // cabe completo en un LPN nuevo: no se parte
+        let take=Math.floor(fit/f)*f;                              // se parte solo en cajas completas
+        if(take<=0){if(cur.lines.length){nuevo();continue}
+          take=Math.min(u,Math.max(f,1));ERR.push('Orden '+o.k+': '+code+' tiene un factor de empaque ('+f+') que no cabe en un LPN; se asignó por unidades.');}
+        take=Math.min(take,u);partido=true;
+        cur.lines.push({r,code,units:take,vol:take*uv,parte:true});cur.vol+=take*uv;u-=take;
+      }
+    });
+  });
+  LPNS.forEach(l=>{const g=LPNS.filter(x=>x.orden===l.orden);l.of=g.length;l.n=g.indexOf(l)+1});
+  render(cap);
+}
+
+function render(cap){
+  $('res').classList.remove('hide');
+  const tu=LPNS.reduce((s,l)=>s+l.lines.reduce((a,x)=>a+x.units,0),0),tv=LPNS.reduce((s,l)=>s+l.vol,0);
+  $('kpis').innerHTML='<div><b>'+LPNS.length+'</b><small>LPN generados</small></div><div><b>'+tu.toLocaleString('es-PE')+'</b><small>unidades asignadas</small></div><div><b>'+tv.toFixed(4)+'</b><small>volumen total</small></div>';
+  $('alerts').innerHTML=ERR.length?'<div class="alert" style="margin-top:12px"><b>Revisar antes de usar</b><ul>'+ERR.map(e=>'<li>'+e+'</li>').join('')+'</ul></div>':'';
+  $('lpns').innerHTML=LPNS.map(l=>{
+    const pct=Math.min(100,l.vol/cap*100);
+    return '<div class="lpn"><div class="lpn-h"><div>'+l.lpn+' <span>Orden '+l.orden+' · bulto '+l.n+' de '+l.of+'</span></div><div>'+l.vol.toFixed(4)+' / '+cap+' <span>('+pct.toFixed(1)+'%)</span></div></div><div class="fill"><i style="width:'+pct+'%"></i></div>'+
+    '<div class="tw"><table><thead><tr><th>Producto</th><th>Descripción</th><th class="n">Unidades</th><th class="n">Volumen</th></tr></thead><tbody>'+
+    l.lines.map(x=>'<tr><td>'+x.code+(x.parte?' <small style="color:var(--warn)">(parcial)</small>':'')+'</td><td>'+(x.r.DESCRIPCION||'')+'</td><td class="n">'+x.units+'</td><td class="n">'+x.vol.toFixed(5)+'</td></tr>').join('')+'</tbody></table></div></div>'}).join('');
+  const m=codigoLpn();
+  $('resumen').innerHTML=m.length?'<h2 style="margin:0 0 8px;font-size:15px">Códigos por LPN</h2><div class="tw"><table><thead><tr><th>Orden</th><th>Producto</th><th>Descripción</th><th class="n">Total</th><th>LPN (unidades)</th></tr></thead><tbody>'+
+    m.map(x=>'<tr><td>'+x.orden+'</td><td>'+x.code+'</td><td>'+x.desc+'</td><td class="n">'+x.total+'</td><td>'+x.lpns+'</td></tr>').join('')+'</tbody></table></div>':'';
+  $('bPdf').disabled=$('bXls').disabled=$('bDet').disabled=!LPNS.length;
+}
+
+function codigoLpn(){
+  const mp={},ord=[];
+  LPNS.forEach(l=>l.lines.forEach(x=>{const k=l.orden+'|'+x.code;if(!mp[k]){mp[k]={orden:l.orden,code:x.code,desc:x.r.DESCRIPCION||'',total:0,p:[]};ord.push(mp[k])}
+    mp[k].total+=x.units;mp[k].p.push(l.lpn+' ('+x.units+')')}));
+  return ord.map(x=>({orden:x.orden,code:x.code,desc:x.desc,total:x.total,lpns:x.p.join(', ')}));
+}
+function pdf(){
+  const {jsPDF}=window.jspdf;const doc=new jsPDF({orientation:'landscape',unit:'pt',format:'a4'});
+  const W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight();
+  const now=new Date(),hh=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+  const pages=[]; // {k, pg}
+  // una sección por orden, con todos sus LPN dentro de la misma tabla
+  const grupos=[];const gi={};
+  LPNS.forEach(l=>{if(!(l.orden in gi)){gi[l.orden]=grupos.length;grupos.push({k:l.orden,head:l.head,lpns:[]})}grupos[gi[l.orden]].lpns.push(l)});
+  grupos.forEach((g,i)=>{
+    if(i>0)doc.addPage();
+    const h=g.head;
+    const cabecera=()=>{
+      pages.push({k:g.k,pg:doc.getNumberOfPages()});
+      doc.setTextColor(200,16,46);doc.setFont('helvetica','bold');doc.setFontSize(15);doc.text('signia',30,38);
+      doc.setTextColor(0);doc.setFont('helvetica','normal');doc.setFontSize(7);doc.text('UR2100013R',30,50);
+      doc.setFontSize(9);
+      [['Nro.Pedido',h.ORDEN+' - '+h.PEDIDO],['Cliente',h.HCUST+' '+h.CLIENTE],['Direccion',String(h.DIR||'').trim()],['Ubigeo',(h.UBIGEO||'')+'      '+(h.HSHIP||'')]]
+        .forEach((p,k)=>{doc.text(p[0],30,64+k*12);doc.text(String(p[1]),84,64+k*12)});
+      doc.setFontSize(14);doc.text('Picking Standard - Por corporativo',330,40);
+      doc.setFontSize(9);doc.text('Total LPN del pedido: '+g.lpns.length,330,60);
+      doc.text('Fecha:  '+d8(h.FECHA),650,38);doc.text('Zona:  '+(h.CODZON||''),740,38);
+      doc.text('Hora:  '+hh,650,50);
+      doc.text('Fecha de Cita  '+d8(h['FECHA CITA']),520,66);doc.text('Hora  '+(h.HORA||''),650,66);
+      doc.setLineWidth(.5);doc.line(30,116,W-30,116);
+      doc.setFontSize(8);
+      doc.text('Cantidad - EQP',30,H-52);doc.text('Items x Despachar',30,H-38);
+      doc.text('Sacador:',130,H-52);doc.line(170,H-50,400,H-50);doc.text('Hora Inicio',130,H-38);doc.line(190,H-36,260,H-36);doc.text('Hora Final:',275,H-38);doc.line(320,H-36,400,H-36);
+      doc.text('Chequeador:',440,H-52);doc.line(490,H-50,740,H-50);doc.text('Hora Inicio',440,H-38);doc.line(490,H-36,560,H-36);doc.text('Hora Final:',600,H-38);doc.line(645,H-36,715,H-36);
+      doc.text('Bultos:',440,H-24);doc.line(490,H-22,740,H-22);
+    };
+    let TP=0,TC=0,TS=0;const body=[];
+    g.lpns.forEach(l=>{
+      let tp=0,tc=0,ts=0;
+      l.lines.forEach(x=>{const f=num(x.r['FACTOR DE EMPAQUE'])||1,c=Math.floor(x.units/f),s=x.units-c*f;tp+=x.units;tc+=c;ts+=s;
+        body.push([l.lpn,x.r.ALM,String(x.r.UBIC)+' '+(x.r.CHK||''),x.code,x.r.DESCRIPCION,x.r['COD.EAN'],x.r['LOTE CLIENTE'],exp8(x.r.EXPIRA),f2(x.units),f2(f),f2(c),String(s)])});
+      TP+=tp;TC+=tc;TS+=ts;
+      const st={fontStyle:'bold',fillColor:[238,240,244],textColor:0};
+      body.push([{content:'Subtotal LPN '+l.lpn,colSpan:8,styles:{...st,halign:'right'}},{content:f2(tp),styles:{...st,halign:'right'}},{content:'',styles:st},{content:f2(tc),styles:{...st,halign:'right'}},{content:String(ts),styles:{...st,halign:'right'}}]);
+    });
+    doc.autoTable({startY:120,margin:{left:30,right:30,top:120,bottom:70},theme:'plain',
+      head:[['LPN','Alm','Ubic','Producto','Descripción','Cod.EAN','Lot.Cliente','Fec.Exp','Cant Picking','X Empaq','N°Cajas','Und.Saldo']],body,
+      foot:[['','','','','','','','Total Cantidad del Pedido',f2(TP),'',f2(TC),f2(TS)]],showFoot:'lastPage',
+      styles:{fontSize:8,cellPadding:{top:3,bottom:3,left:3,right:3},overflow:'ellipsize'},
+      headStyles:{fontStyle:'normal'},footStyles:{fontStyle:'normal',fillColor:false,textColor:0},
+      columnStyles:{0:{cellWidth:46,fontStyle:'bold'},1:{cellWidth:26},2:{cellWidth:50},3:{cellWidth:76},4:{cellWidth:178},5:{cellWidth:74},6:{cellWidth:58},7:{cellWidth:46},8:{cellWidth:62,halign:'right'},9:{cellWidth:46,halign:'right'},10:{cellWidth:42,halign:'right'},11:{cellWidth:48,halign:'right'}},
+      didDrawPage:cabecera});
+  });
+  // "Página x de y" por orden
+  const total={};pages.forEach(p=>{total[p.k]=(total[p.k]||0)+1});const cnt={};
+  pages.forEach(p=>{cnt[p.k]=(cnt[p.k]||0)+1;doc.setPage(p.pg);doc.setFontSize(9);doc.setTextColor(0);
+    const t='Página '+cnt[p.k]+' de '+total[p.k];doc.text(t,560,38);doc.text(t,W-90,H-52)});
+  doc.save('Picking_LPN_'+LPNS[0].orden+(grupos.length>1?'_y_otros':'')+'.pdf');
+}
+
+function xls(){
+  const out=[];LPNS.forEach(l=>l.lines.forEach(x=>out.push({ORDEN:l.orden,PEDIDO:x.r.PEDIDO,LPN:l.lpn,PRODUCTO:x.code,DESCRIPCION:x.r.DESCRIPCION,UNIDADES:x.units,VOLUMEN:+x.vol.toFixed(6)})));
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(out),'LPN');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(codigoLpn().map(x=>({ORDEN:x.orden,PRODUCTO:x.code,DESCRIPCION:x.desc,TOTAL:x.total,'LPN (UNIDADES)':x.lpns}))),'CODIGO_X_LPN');
+  XLSX.writeFile(wb,'DETALLE_LPN.xls',{bookType:'biff8'});
+}
+
+// Detalle del pedido: solo ORDEN, PEDIDO, LPN, CODIGO, LOTE, EXPIRA, CANTIDAD
+function detalle(){
+  const out=[];
+  LPNS.forEach(l=>l.lines.forEach(x=>out.push({
+    ORDEN:l.orden,
+    PEDIDO:x.r.PEDIDO,
+    LPN:l.lpn,
+    CODIGO:x.code,
+    LOTE:x.r['LOTE CLIENTE'],
+    EXPIRA:x.r.EXPIRA,
+    CANTIDAD:x.units
+  })));
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(out,{header:['ORDEN','PEDIDO','LPN','CODIGO','LOTE','EXPIRA','CANTIDAD']}),'DETALLE');
+  XLSX.writeFile(wb,'DETALLE_PEDIDOS_LPN.xls',{bookType:'biff8'});
+}
+
+$('bCalc').onclick=calcular;$('bPdf').onclick=pdf;$('bXls').onclick=xls;$('bDet').onclick=detalle;
+refresh();
+cargarSheet();
+</script>
+</body>
+</html>
