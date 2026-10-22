@@ -3,124 +3,459 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>División por LPN según volumen</title>
+<title>OSAWMS · División LPN & Picking</title>
+<!-- Tailwind CSS for enterprise polish & Lucide Icons -->
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-<style>
-:root{--bg:#f3f4f7;--card:#fff;--ink:#1d2433;--mute:#667085;--line:#dfe3ea;--red:#c8102e;--ok:#1a7f4b;--warn:#b54708}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
-header{background:var(--ink);color:#fff;padding:16px 24px;display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
-header h1{margin:0;font-size:19px;font-weight:600}
-header span{color:#b9c0d0;font-size:13px}
-main{max-width:1100px;margin:0 auto;padding:20px;display:grid;gap:16px}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px}
-.card h2{margin:0 0 10px;font-size:15px}
-.step{display:inline-block;background:var(--red);color:#fff;border-radius:50%;width:22px;height:22px;text-align:center;line-height:22px;font-size:12px;margin-right:6px}
-input[type=file]{width:100%;margin:6px 0}
-label{display:block;margin:8px 0 3px;color:var(--mute);font-size:12px}
-input[type=text],input[type=number]{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:6px;font:inherit}
-.row{display:flex;gap:10px}.row>div{flex:1}
-.chk{display:flex;gap:8px;align-items:center;margin-top:10px;color:var(--ink);font-size:13px}
-.st{margin-top:8px;font-size:12.5px;color:var(--mute)}
-.st.ok{color:var(--ok)}
-.st.err{color:var(--warn)}
-details{margin-top:10px;font-size:12.5px;color:var(--mute)}
-summary{cursor:pointer}
-button{font:inherit;padding:9px 16px;border:0;border-radius:6px;cursor:pointer;background:var(--red);color:#fff;font-weight:600}
-button.sec{background:#fff;color:var(--ink);border:1px solid var(--line)}
-button:disabled{opacity:.4;cursor:not-allowed}
-button:focus-visible,input:focus-visible{outline:2px solid #2f6fed;outline-offset:2px}
-.bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-.kpis{display:flex;gap:22px;flex-wrap:wrap}
-.kpis b{display:block;font-size:20px}.kpis small{color:var(--mute)}
-.alert{background:#fff4e5;border:1px solid #f5c98a;color:var(--warn);border-radius:6px;padding:10px 12px;font-size:13px}
-.alert ul{margin:4px 0 0 18px;padding:0}
-.lpn{border:1px solid var(--line);border-radius:8px;margin-top:12px;overflow:hidden}
-.lpn-h{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;background:#f7f8fa;padding:9px 12px;font-weight:600}
-.lpn-h span{font-weight:400;color:var(--mute)}
-.fill{height:6px;background:#e8ebf1}.fill i{display:block;height:100%;background:var(--ok)}
-.tw{overflow-x:auto}
-table{width:100%;border-collapse:collapse;font-size:13px}
-th,td{padding:6px 12px;text-align:left;border-top:1px solid var(--line);white-space:nowrap}
-th{color:var(--mute);font-weight:500;font-size:12px}
-td.n,th.n{text-align:right}
-.hide{display:none}
-</style>
-</head>
-<body>
-<header><h1>División por LPN según volumen</h1><span>Pedido + volúmenes (Google Sheets) → LPN → PDF Picking Standard</span></header>
-<main>
-  <div class="grid">
-    <section class="card">
-      <h2><span class="step">1</span>Detalle del pedido</h2>
-      <input type="file" id="fPed" accept=".xls,.xlsx" aria-label="Archivo de pedido">
-      <div class="st" id="stPed">Columnas esperadas: ORDEN, PRODUCTO, CANTIDAD y datos de cabecera (PLANTILLA_PEDIDOS).</div>
-    </section>
-    <section class="card">
-      <h2><span class="step">2</span>Maestra de volúmenes</h2>
-      <div class="st" id="stVol" style="margin-top:0">Cargando desde Google Sheets…</div>
-      <div class="bar" style="margin-top:10px"><button class="sec" id="bSheet">Actualizar desde Google Sheets</button></div>
-      <details>
-        <summary>Cargar un archivo manualmente (opcional)</summary>
-        <input type="file" id="fVol" accept=".xls,.xlsx,.csv" aria-label="Archivo de volúmenes">
-        <div>Columnas: IPROD (código) e IVULI (volumen unitario).</div>
-      </details>
-    </section>
-    <section class="card">
-      <h2><span class="step">3</span>Parámetros</h2>
-      <div class="row">
-        <div><label for="cap">Volumen por LPN</label><input type="number" id="cap" value="0.0203" step="0.0001" min="0"></div>
-        <div><label for="pre">Prefijo LPN</label><input type="text" id="pre" value="" placeholder="(opcional)"></div>
-        <div><label for="ini">Primer LPN</label><input type="number" id="ini" value="1" min="1"></div>
-      </div>
-      <div class="st" id="stCfg">Histórico y último LPN: sin conexión (falta la URL del script).</div>
-      <div class="st">Un código va completo en un solo LPN. Solo si supera el volumen de un LPN se parte, en múltiplos del factor de empaque (cajas completas).</div>
-    </section>
-  </div>
-
-  <section class="card">
-    <div class="bar">
-      <button id="bCalc" disabled>Dividir en LPN</button>
-      <button id="bPdf" class="sec" disabled>Descargar PDF</button>
-      <button id="bXls" class="sec" disabled>Descargar XLS</button>
-      <button id="bDet" class="sec" disabled>Descargar detalle del pedido</button>
-      <button id="bPla" class="sec" disabled>Descargar PLANTILLA_PEDIDOS (.xls)</button>
-      <button id="bHis" disabled>Guardar en histórico</button>
-    </div>
-    <div id="res" class="hide">
-      <div class="kpis" style="margin-top:14px" id="kpis"></div>
-      <div id="alerts"></div>
-      <div class="lpn" style="padding:12px" id="resumen"></div>
-      <div id="lpns"></div>
-    </div>
-  </section>
-
-  <section class="card">
-    <h2>Regenerar pedido</h2>
-    <div class="st" style="margin-top:0">Vuelve a imprimir el PDF de picking de pedidos ya guardados en el histórico. No crea LPN nuevos ni cambia el último LPN.</div>
-    <div class="row" style="margin-top:8px">
-      <div><label for="regCampo">Buscar por</label>
-        <select id="regCampo" style="width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:6px;font:inherit;background:#fff"><option value="PEDIDO">Pedido</option><option value="ORDEN">Orden</option></select></div>
-      <div><label for="regDesde">Desde</label><input type="text" id="regDesde" inputmode="numeric" placeholder="ej. 4900011934"></div>
-      <div><label for="regHasta">Hasta (opcional)</label><input type="text" id="regHasta" inputmode="numeric" placeholder="igual a Desde"></div>
-    </div>
-    <div class="bar" style="margin-top:12px">
-      <button class="sec" id="bRegBuscar">Buscar en histórico</button>
-      <button id="bRegPdf" disabled>Descargar PDF regenerado</button>
-    </div>
-    <div class="st" id="stReg">Escribe un rango y pulsa Buscar.</div>
-    <div class="tw" id="regTabla"></div>
-  </section>
-</main>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
 <script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+          mono: ['"JetBrains Mono"', 'monospace'],
+        },
+        colors: {
+          brand: {
+            50: '#fef2f2',
+            100: '#fee2e2',
+            400: '#f87171',
+            500: '#ef4444',
+            600: '#dc2626',
+            700: '#c8102e', // Signia Red
+            800: '#991b1b',
+            900: '#7f1d1d'
+          },
+          slate: {
+            850: '#151e2e',
+            900: '#0f172a'
+          }
+        }
+      }
+    }
+  }
+</script>
+
+<style>
+  body {
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    background-color: #f8fafc;
+    color: #1e293b;
+    -webkit-font-smoothing: antialiased;
+  }
+  .hide { display: none !important; }
+  .table-container {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 #f1f5f9;
+  }
+  .table-container::-webkit-scrollbar {
+    height: 6px;
+    width: 6px;
+  }
+  .table-container::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 9999px;
+  }
+  .progress-glow {
+    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+</style>
+</head>
+
+<body class="min-h-screen flex flex-col bg-slate-50 text-slate-800 antialiased selection:bg-rose-100 selection:text-rose-900">
+
+  <!-- TOP EXECUTIVE NAVIGATION BAR -->
+  <header class="bg-slate-900 border-b border-slate-800 text-white sticky top-0 z-50 shadow-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <!-- Brand & Context -->
+        <div class="flex items-center space-x-4">
+          <div class="flex items-center gap-2">
+            <span class="text-xl font-extrabold tracking-tight text-white flex items-center gap-1.5">
+              <span class="w-3 h-3 rounded-full bg-brand-700 animate-pulse"></span>
+              OSAWMS
+            </span>
+          </div>
+          <div class="hidden md:block h-5 w-px bg-slate-700"></div>
+          <div class="hidden md:flex flex-col">
+            <h1 class="text-sm font-semibold text-slate-100 tracking-tight leading-none">División por LPN según Volumen</h1>
+            <span class="text-xs text-slate-400 mt-1">Gestión Inteligente de Picking Corporativo</span>
+          </div>
+        </div>
+
+        <!-- System Status & Quick Indicators -->
+        <div class="flex items-center gap-3">
+          <div id="connectionPill" class="flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-800/80 border border-slate-700/80 text-slate-300 shadow-inner">
+            <span class="w-2 h-2 rounded-full bg-slate-400 ring-2 ring-slate-400/20" id="connLed"></span>
+            <span id="connLabel" class="font-mono text-xs">Sincronizando...</span>
+          </div>
+          <a href="#section-regenerar" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-colors border border-transparent hover:border-slate-700">
+            <i data-lucide="history" class="w-3.5 h-3.5"></i>
+            Histórico
+          </a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- SUBHEADER / BREADCRUMB / METRIC BANNER -->
+  <div class="bg-white border-b border-slate-200/80 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-2 text-xs font-medium text-slate-500">
+        <span class="text-slate-700">Flujo de Operación:</span>
+        <span class="flex items-center gap-1 text-slate-900 font-semibold bg-slate-100 px-2 py-0.5 rounded">1. Carga de Pedido</span>
+        <span>→</span>
+        <span class="flex items-center gap-1 text-slate-900 font-semibold bg-slate-100 px-2 py-0.5 rounded">2. Cubicaje</span>
+        <span>→</span>
+        <span class="flex items-center gap-1 text-slate-900 font-semibold bg-slate-100 px-2 py-0.5 rounded">3. Generación LPN & PDF</span>
+      </div>
+      <div id="sheetStatusBadge" class="flex items-center gap-1.5 text-xs text-slate-600 bg-slate-50 px-2.5 py-1 rounded border border-slate-200">
+        <i data-lucide="database" class="w-3.5 h-3.5 text-slate-500"></i>
+        <span id="badgeVolCount">Maestra de volúmenes: verificando...</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN WORKSPACE -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 space-y-8 w-full">
+
+    <!-- SECCIÓN 1: CONFIGURACIÓN Y FUENTES DE ENTRADA (3 COLUMNS) -->
+    <section class="space-y-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
+            <span class="flex items-center justify-center w-6 h-6 rounded-md bg-slate-900 text-white text-xs font-mono">01</span>
+            Configuración & Fuentes de Datos
+          </h2>
+          <p class="text-xs text-slate-500 mt-0.5">Definición de pedidos, maestra volumétrica y parámetros de cubeta/caja LPN.</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        
+        <!-- CARD 1: Detalle del Pedido -->
+        <div class="bg-white rounded-xl border border-slate-200/90 shadow-sm hover:shadow transition-shadow p-5 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                <i data-lucide="file-spreadsheet" class="w-4 h-4 text-brand-700"></i>
+                Archivo de Pedido
+              </span>
+              <span class="px-2 py-0.5 rounded text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60" id="badgePedStatus">Requerido</span>
+            </div>
+
+            <div class="mt-4">
+              <label class="block text-xs font-semibold text-slate-700 mb-1.5">Subir Planilla (.xls / .xlsx)</label>
+              <div class="relative group">
+                <input type="file" id="fPed" accept=".xls,.xlsx" aria-label="Archivo de pedido" 
+                  class="block w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 cursor-pointer border border-dashed border-slate-300 rounded-lg p-2 bg-slate-50/50 group-hover:border-slate-400 transition-colors">
+              </div>
+              <p class="text-xs text-slate-500 mt-2">Columnas requeridas: <span class="font-mono text-slate-600">ORDEN, PRODUCTO, CANTIDAD</span> y cabeceras operativas.</p>
+            </div>
+          </div>
+
+          <div class="mt-4 pt-3 border-t border-slate-100">
+            <div class="flex items-start gap-2 text-xs text-slate-500" id="stPedBox">
+              <i data-lucide="info" class="w-4 h-4 text-slate-500 shrink-0 mt-0.5"></i>
+              <span id="stPed" class="leading-relaxed">Sin archivo seleccionado. Esperando carga...</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- CARD 2: Maestra de Volúmenes -->
+        <div class="bg-white rounded-xl border border-slate-200/90 shadow-sm hover:shadow transition-shadow p-5 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                <i data-lucide="box" class="w-4 h-4 text-indigo-600"></i>
+                Maestra de Volúmenes
+              </span>
+              <span class="px-2 py-0.5 rounded text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200/60">Cloud Sync</span>
+            </div>
+
+            <div class="mt-4 space-y-3">
+              <div class="flex items-center justify-between">
+                <div>
+                  <div class="text-xs font-semibold text-slate-700">Google Sheets Central</div>
+                  <div class="text-xs text-slate-500" id="stVol">Conectando a la maestra en la nube…</div>
+                </div>
+                <button id="bSheet" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-colors active:scale-95 disabled:opacity-50">
+                  <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-slate-600"></i>
+                  Actualizar
+                </button>
+              </div>
+
+              <!-- Manual Fallback Accordion -->
+              <details class="group border border-slate-200 rounded-lg p-2.5 bg-slate-50/60 text-xs text-slate-600">
+                <summary class="cursor-pointer font-medium text-slate-700 flex items-center justify-between list-none">
+                  <span class="flex items-center gap-1.5">
+                    <i data-lucide="upload" class="w-3.5 h-3.5 text-slate-500"></i>
+                    Cargar archivo manual (opcional)
+                  </span>
+                  <i data-lucide="chevron-down" class="w-3.5 h-3.5 transition-transform group-open:rotate-180 text-slate-500"></i>
+                </summary>
+                <div class="pt-2.5 mt-2 border-t border-slate-200/70">
+                  <input type="file" id="fVol" accept=".xls,.xlsx,.csv" aria-label="Archivo de volúmenes"
+                    class="block w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded file:border-0 file:text-xs file:font-medium file:bg-white file:text-slate-700 file:border file:border-slate-200 cursor-pointer">
+                  <p class="text-xs text-slate-500 mt-1.5">Estructura requerida: <span class="font-mono text-slate-600">IPROD</span> (código) e <span class="font-mono text-slate-600">IVULI</span> (volumen unitario).</p>
+                </div>
+              </details>
+            </div>
+          </div>
+
+          <div class="mt-4 pt-3 border-t border-slate-100">
+            <div class="text-xs text-slate-500 flex items-center gap-1.5">
+              <i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-emerald-600"></i>
+              <span>Soporte con prefijo automático <code class="font-mono font-semibold text-slate-700">GY</code></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- CARD 3: Parámetros del Algoritmo -->
+        <div class="bg-white rounded-xl border border-slate-200/90 shadow-sm hover:shadow transition-shadow p-5 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                <i data-lucide="sliders" class="w-4 h-4 text-amber-600"></i>
+                Parámetros Operativos
+              </span>
+              <span class="px-2 py-0.5 rounded text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200/60">Cálculo</span>
+            </div>
+
+            <div class="mt-3.5 grid grid-cols-3 gap-2.5">
+              <div class="col-span-1">
+                <label for="cap" class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">Vol. LPN</label>
+                <div class="relative">
+                  <input type="number" id="cap" value="0.0203" step="0.0001" min="0"
+                    class="w-full px-2.5 py-1.5 text-xs font-mono font-semibold bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-700/20 focus:border-brand-700 focus:bg-white transition-all text-slate-800">
+                </div>
+                <span class="text-xs text-slate-500">volumen por LPN</span>
+              </div>
+
+              <div class="col-span-1">
+                <label for="pre" class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">Prefijo</label>
+                <input type="text" id="pre" value="" placeholder="Ej. LPN"
+                  class="w-full px-2.5 py-1.5 text-xs font-mono bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-700/20 focus:border-brand-700 focus:bg-white transition-all text-slate-800">
+                <span class="text-xs text-slate-500">Opcional</span>
+              </div>
+
+              <div class="col-span-1">
+                <label for="ini" class="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">Primer LPN</label>
+                <input type="number" id="ini" value="1" min="1"
+                  class="w-full px-2.5 py-1.5 text-xs font-mono font-bold bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-700/20 focus:border-brand-700 focus:bg-white transition-all text-brand-700">
+                <span class="text-xs text-slate-500">Secuencial</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-3 pt-3 border-t border-slate-100">
+            <div id="stCfg" class="text-xs text-slate-500 font-mono bg-slate-50 p-2 rounded border border-slate-200 leading-tight">
+              Verificando último LPN en la base de datos...
+            </div>
+            <p class="text-xs text-slate-500 mt-1.5">Regla: Partición en múltiplos de empaque solo al superar capacidad máxima.</p>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- SECCIÓN 2: ACCIÓN PRINCIPAL & PANEL DE CONTROL -->
+    <section class="bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 rounded-2xl p-6 text-white shadow-lg border border-slate-800">
+      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+        <div>
+          <div class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-brand-700/20 border border-brand-700/40 text-brand-400 text-xs font-semibold uppercase tracking-wider mb-2">
+            Motor de Asignación Volumétrica
+          </div>
+          <h2 class="text-xl font-bold tracking-tight text-white">Ejecutar División & Exportar Reportes</h2>
+          <p class="text-xs text-slate-400 mt-1 max-w-xl">
+            Procesa el algoritmo de cubicaje para distribuir los ítems en cajas y bultos LPN, validando empaques completos y saldos.
+          </p>
+        </div>
+
+        <!-- Action Buttons Bar -->
+        <div class="flex flex-wrap items-center gap-2.5">
+          <button id="bCalc" disabled
+            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs bg-brand-700 hover:bg-brand-600 active:scale-95 text-white shadow-md shadow-brand-900/30 transition-all disabled:opacity-40 disabled:pointer-events-none">
+            <i data-lucide="play" class="w-4 h-4 fill-current"></i>
+            Dividir en LPN
+          </button>
+
+          <button id="bPdf" disabled
+            class="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl font-semibold text-xs bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 border border-slate-700 transition-all disabled:opacity-40 disabled:pointer-events-none">
+            <i data-lucide="file-text" class="w-4 h-4 text-rose-400"></i>
+            Descargar PDF
+          </button>
+
+          <button id="bXls" disabled
+            class="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl font-semibold text-xs bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 border border-slate-700 transition-all disabled:opacity-40 disabled:pointer-events-none">
+            <i data-lucide="sheet" class="w-4 h-4 text-emerald-400"></i>
+            Descargar XLS
+          </button>
+
+          <button id="bDet" disabled
+            class="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl font-semibold text-xs bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 border border-slate-700 transition-all disabled:opacity-40 disabled:pointer-events-none">
+            <i data-lucide="list-checks" class="w-4 h-4 text-blue-400"></i>
+            Descargar detalle del pedido
+          </button>
+
+          <button id="bPla" disabled
+            class="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl font-semibold text-xs bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 border border-slate-700 transition-all disabled:opacity-40 disabled:pointer-events-none">
+            <i data-lucide="table" class="w-4 h-4 text-amber-400"></i>
+            Descargar PLANTILLA_PEDIDOS (.xls)
+          </button>
+
+          <button id="bHis" disabled
+            class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white shadow-md shadow-emerald-950/20 transition-all disabled:opacity-40 disabled:pointer-events-none">
+            <i data-lucide="cloud-upload" class="w-4 h-4"></i>
+            Guardar en histórico
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 3: RESULTADOS DE PROCESAMIENTO & AUDITORÍA (APARECE TRAS CALCULAR) -->
+    <section id="res" class="hide space-y-6">
+      
+      <!-- KPI Executive Cards Grid -->
+      <div>
+        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3 flex items-center gap-2">
+          <i data-lucide="bar-chart-3" class="w-4 h-4 text-slate-700"></i>
+          Métricas de la División Ejecutada
+        </h3>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4" id="kpisCardsContainer">
+          <!-- Dinámico: KPIs insertados aquí con diseño enriquecido -->
+        </div>
+      </div>
+
+      <!-- Alertas & Avisos de Control -->
+      <div id="alerts"></div>
+
+      <!-- Resumen Consolidado: Códigos por LPN -->
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+          <div class="flex items-center gap-2">
+            <div class="p-1.5 bg-rose-50 rounded text-brand-700">
+              <i data-lucide="boxes" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <h4 class="text-sm font-bold text-slate-900">Resumen Consolidado · Códigos por LPN</h4>
+              <p class="text-xs text-slate-500">Distribución agregada de productos y desglose de unidades por bulto asignado.</p>
+            </div>
+          </div>
+          <span class="text-xs font-mono font-medium px-2 py-0.5 rounded bg-slate-200 text-slate-700" id="resumenBadgeCount"></span>
+        </div>
+        <div class="p-0 table-container overflow-x-auto" id="resumen">
+          <!-- Tabla consolidada insertada vía JS -->
+        </div>
+      </div>
+
+      <!-- Desglose Individual de LPNs (Detallado con Bar Graph) -->
+      <div class="space-y-4">
+        <div class="flex items-center justify-between">
+          <h4 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+            <i data-lucide="layers" class="w-4 h-4 text-slate-600"></i>
+            Detalle Operativo por LPN (Bultos Generados)
+          </h4>
+          <span class="text-xs text-slate-500">Verifica la capacidad volumétrica y porcentajes de llenado</span>
+        </div>
+        <div id="lpns" class="space-y-4">
+          <!-- Bultos insertados vía JS con estilo ejecutivo -->
+        </div>
+      </div>
+
+    </section>
+
+    <!-- SECCIÓN 4: REGENERACIÓN DE PEDIDOS (HISTÓRICO) -->
+    <section id="section-regenerar" class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-5">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
+            <i data-lucide="archive-restore" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-slate-900 tracking-tight">Reimpresión & Regeneración desde Histórico</h3>
+            <p class="text-xs text-slate-500 mt-0.5">Vuelve a emitir el PDF de picking estándar sin alterar la numeración de LPNs vigentes.</p>
+          </div>
+        </div>
+        <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono bg-slate-100 text-slate-600 border border-slate-200 self-start sm:self-auto">
+          <span>Modo Solo Lectura</span>
+        </div>
+      </div>
+
+      <!-- Controls Row -->
+      <div class="grid grid-cols-1 sm:grid-cols-12 gap-3.5 items-end">
+        <div class="sm:col-span-3">
+          <label for="regCampo" class="block text-xs font-semibold text-slate-700 mb-1">Criterio de Búsqueda</label>
+          <select id="regCampo" class="w-full px-3 py-2 text-xs font-medium bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-400 focus:bg-white text-slate-800">
+            <option value="PEDIDO">N° de Pedido</option>
+            <option value="ORDEN">N° de Orden</option>
+          </select>
+        </div>
+
+        <div class="sm:col-span-3">
+          <label for="regDesde" class="block text-xs font-semibold text-slate-700 mb-1">Desde (Valor inicial)</label>
+          <input type="text" id="regDesde" inputmode="numeric" placeholder="Ej. 4900011934"
+            class="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-400 focus:bg-white text-slate-800">
+        </div>
+
+        <div class="sm:col-span-3">
+          <label for="regHasta" class="block text-xs font-semibold text-slate-700 mb-1">Hasta (Opcional si es rango)</label>
+          <input type="text" id="regHasta" inputmode="numeric" placeholder="Igual a 'Desde' si es único"
+            class="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-400 focus:bg-white text-slate-800">
+        </div>
+
+        <div class="sm:col-span-3 flex gap-2">
+          <button id="bRegBuscar"
+            class="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold bg-slate-800 hover:bg-slate-700 text-white transition-colors">
+            <i data-lucide="search" class="w-3.5 h-3.5"></i>
+            Buscar
+          </button>
+          <button id="bRegPdf" disabled
+            class="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold bg-brand-700 hover:bg-brand-600 text-white transition-colors disabled:opacity-40 disabled:pointer-events-none shadow-sm">
+            <i data-lucide="download" class="w-3.5 h-3.5"></i>
+            PDF
+          </button>
+        </div>
+      </div>
+
+      <!-- Status Indicator -->
+      <div id="stReg" class="text-xs text-slate-500 font-mono bg-slate-50 px-3 py-2 rounded-lg border border-slate-200">
+        Introduce el número de orden o pedido y pulsa Buscar.
+      </div>
+
+      <!-- Regenerated Results Table -->
+      <div class="table-container overflow-x-auto rounded-lg border border-slate-200 shadow-sm" id="regTabla"></div>
+    </section>
+
+  </main>
+
+  <!-- EXECUTIVE FOOTER -->
+  <footer class="bg-white border-t border-slate-200 mt-12 py-6 text-xs text-slate-500">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-2">
+        <span class="font-bold text-slate-800">OSAWMS</span>
+        <span>·</span>
+        <span>Módulo de Picking Estándar & Cubicación LPN</span>
+      </div>
+      <div class="text-slate-500 text-xs">
+        Integración Google Sheets & Apps Script en tiempo real
+      </div>
+    </div>
+  </footer>
+
+<script>
+// --- CORE LOGIC PRESERVED COMPLETELY ---
 const SHEET_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTv7UOlzavB9YZqWbwzrTyIrL5uuM8Zs69Xjpdf3nl8HAN8zBJ1R6ADyale7RiS_n5cg7tvhu4FiWeJ/pub?gid=0&single=true&output=csv';
-// URL de la aplicación web de Apps Script (termina en /exec). Si queda vacía, no hay histórico ni último LPN.
 const APPS_URL='https://script.google.com/macros/s/AKfycbyJzvnXL6rh-V7pOMOgEJ7afB2YN84OdpZKe7TFK-kSjiMGoRbSxrwGrpB_KF9TJ9qnNQ/exec';
 const $=id=>document.getElementById(id);
+const esc=v=>String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 let VOL={}, PED=[], LPNS=[], ERR=[], COLS=[];
 let CFG={ok:false,ultimo:0}, PRIM=1, ULT=0, SAVED=false;
 const norm=v=>String(v==null?'':v).trim().toUpperCase();
@@ -129,11 +464,11 @@ const MES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','di
 function d8(v){const s=String(v||'').replace(/\D/g,'');return s.length===8?s.slice(6,8)+'/'+s.slice(4,6)+'/'+s.slice(2,4):String(v||'')}
 function exp8(v){const s=String(v||'').replace(/\D/g,'');return s.length===8?MES[+s.slice(4,6)-1]+'.-'+s.slice(2,4):String(v||'')}
 function f2(n){return Number(n).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2})}
+
 function readSheet(file){return new Promise((ok,ko)=>{const r=new FileReader();
   r.onload=e=>{try{const wb=XLSX.read(e.target.result,{type:'array'});ok(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''}))}catch(x){ko(x)}};
   r.onerror=ko;r.readAsArrayBuffer(file)})}
 
-// Busca el volumen de un código; si no aparece tal cual, prueba con/sin el prefijo "GY" de la maestra
 function volDe(code){
   if(Object.prototype.hasOwnProperty.call(VOL,code))return VOL[code];
   if(code.startsWith('GY')&&Object.prototype.hasOwnProperty.call(VOL,code.slice(2)))return VOL[code.slice(2)];
@@ -145,15 +480,14 @@ function setVol(rows,origen){
   const nv={};let n=0;
   rows.forEach(r=>{const c=norm(r.IPROD),v=num(r.IVULI);if(c){nv[c]=v;n++}});
   VOL=nv;
-  $('stVol').textContent=n+' códigos cargados ('+origen+').';
-  $('stVol').className='st ok';
+  $('stVol').innerHTML='<span class="text-emerald-600 font-semibold">'+n+' códigos activos</span> ('+origen+')';
+  $('badgeVolCount').innerHTML='Maestra: <strong class="text-slate-800">'+n+' SKU volumétricos</strong>';
   try{localStorage.setItem('lpn_vol',JSON.stringify(VOL))}catch(e){}
   refresh();
 }
 
-// Carga desde Google Sheets (CSV publicado)
 async function cargarSheet(){
-  $('stVol').textContent='Cargando desde Google Sheets…';$('stVol').className='st';
+  $('stVol').innerHTML='<span class="text-slate-500">Sincronizando con Google Sheets...</span>';
   $('bSheet').disabled=true;
   try{
     const res=await fetch(SHEET_URL+'&t='+Date.now(),{cache:'no-store'});
@@ -165,8 +499,8 @@ async function cargarSheet(){
     setVol(rows,'Google Sheets, '+new Date().toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'}));
   }catch(x){
     const n=Object.keys(VOL).length;
-    $('stVol').textContent='No se pudo leer el Google Sheet ('+x.message+').'+(n?' Se usan los '+n+' códigos guardados de la sesión anterior.':' Puedes cargar un archivo manualmente.');
-    $('stVol').className='st err';
+    $('stVol').innerHTML='<span class="text-amber-600 font-medium">Error al leer Google Sheets ('+esc(x.message)+').</span>'+(n?' Se usan '+n+' códigos en caché.':' Cargar manual.');
+    $('badgeVolCount').textContent='Error en sincronización';
     refresh();
   }
   $('bSheet').disabled=false;
@@ -175,25 +509,38 @@ async function cargarSheet(){
 try{const s=localStorage.getItem('lpn_vol');if(s)VOL=JSON.parse(s)}catch(e){}
 
 $('bSheet').onclick=cargarSheet;
+
 $('fVol').onchange=async e=>{const f=e.target.files[0];if(!f)return;
   try{const rows=await readSheet(f);if(!rows.length||!('IPROD' in rows[0])||!('IVULI' in rows[0]))throw new Error('Faltan las columnas IPROD / IVULI');setVol(rows,'archivo manual')}
-  catch(x){$('stVol').textContent='No se pudo leer: '+x.message;$('stVol').className='st err'}};
+  catch(x){$('stVol').innerHTML='<span class="text-rose-600">No se pudo leer: '+esc(x.message)+'</span>'}};
+
 $('fPed').onchange=async e=>{const f=e.target.files[0];if(!f)return;
   try{const rows=await readSheet(f);
-    if(!rows.length||!('ORDEN' in rows[0])||!('PRODUCTO' in rows[0])||!('CANTIDAD' in rows[0]))throw new Error('Faltan las columnas ORDEN / PRODUCTO / CANTIDAD');
+    if(!rows.length||!('ORDEN' in rows[0])||!('PRODUCTO' in rows[0])||!('CANTIDAD' in rows[0]))throw new Error('Faltan columnas ORDEN / PRODUCTO / CANTIDAD');
     COLS=Object.keys(rows[0]);
     PED=rows.filter(r=>norm(r.PRODUCTO)&&num(r.CANTIDAD)>0);
     const ords=new Set(PED.map(r=>r.ORDEN));
-    $('stPed').textContent=PED.length+' líneas en '+ords.size+' orden(es).';$('stPed').className='st ok';refresh()}
-  catch(x){$('stPed').textContent='No se pudo leer: '+x.message;$('stPed').className='st'}};
-function refresh(){$('bCalc').disabled=!(PED.length&&Object.keys(VOL).length)}
+    $('stPed').innerHTML='<span class="text-emerald-700 font-bold">'+PED.length+' líneas cargadas</span> en <span class="font-bold">'+ords.size+' orden(es)</span>.';
+    $('badgePedStatus').className="px-2 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300";
+    $('badgePedStatus').textContent="Cargado ✓";
+    refresh()}
+  catch(x){
+    $('stPed').innerHTML='<span class="text-rose-600 font-semibold">Error: '+esc(x.message)+'</span>';
+    $('badgePedStatus').className="px-2 py-0.5 rounded text-xs font-semibold bg-rose-100 text-rose-800 border border-rose-300";
+    $('badgePedStatus').textContent="Inválido";
+  }};
+
+function refresh(){
+  const canCalc = PED.length>0 && Object.keys(VOL).length>0;
+  $('bCalc').disabled = !canCalc;
+}
 
 function calcular(){
   const cap=num($('cap').value),pre=$('pre').value.trim(),E=1e-9;
   let ini=Math.max(1,parseInt($('ini').value)||1);
   LPNS=[];ERR=[];
   if(CFG.ok&&ini<=CFG.ultimo){
-    ERR.push('El primer LPN se ajustó a '+(CFG.ultimo+1)+' porque el último LPN trabajado fue '+CFG.ultimo+'.');
+    ERR.push('El primer LPN se ajustó a '+(CFG.ultimo+1)+' porque el último LPN registrado fue '+CFG.ultimo+'.');
     ini=CFG.ultimo+1;$('ini').value=ini;
   }
   let seq=ini;
@@ -204,18 +551,18 @@ function calcular(){
     const nuevo=()=>{cur={orden:o.k,head,lpn:pre+String(seq++).padStart(6,'0'),lines:[],vol:0};LPNS.push(cur)};
     o.rows.forEach(r=>{
       const code=norm(r.PRODUCTO),uv=volDe(code);
-      if(uv===undefined){ERR.push('Orden '+o.k+': el código '+code+' no está en la maestra de volúmenes (no se incluyó).');return}
-      if(!(uv>0)){ERR.push('Orden '+o.k+': el código '+code+' tiene volumen 0 en la maestra (no se incluyó).');return}
+      if(uv===undefined){ERR.push('Orden '+o.k+': el código '+code+' no está en la maestra de volúmenes (omitido).');return}
+      if(!(uv>0)){ERR.push('Orden '+o.k+': el código '+code+' tiene volumen 0 en la maestra (omitido).');return}
       const f=Math.max(1,num(r['FACTOR DE EMPAQUE'])||1);
       let u=num(r.CANTIDAD);const maxU=Math.floor((cap+E)/uv);let partido=false;
       while(u>0){
         if(!cur)nuevo();
         const fit=Math.floor((cap-cur.vol+E)/uv);
         if(fit>=u){cur.lines.push({r,code,units:u,vol:u*uv,parte:partido});cur.vol+=u*uv;u=0;break}
-        if(maxU>=u&&cur.lines.length){nuevo();continue}          // cabe completo en un LPN nuevo: no se parte
-        let take=Math.floor(fit/f)*f;                              // se parte solo en cajas completas
+        if(maxU>=u&&cur.lines.length){nuevo();continue}
+        let take=Math.floor(fit/f)*f;
         if(take<=0){if(cur.lines.length){nuevo();continue}
-          take=Math.min(u,Math.max(f,1));ERR.push('Orden '+o.k+': '+code+' tiene un factor de empaque ('+f+') que no cabe en un LPN; se asignó por unidades.');}
+          take=Math.min(u,Math.max(f,1));ERR.push('Orden '+o.k+': '+code+' tiene factor de empaque ('+f+') mayor que un LPN; asignado por unidades.');}
         take=Math.min(take,u);partido=true;
         cur.lines.push({r,code,units:take,vol:take*uv,parte:true});cur.vol+=take*uv;u-=take;
       }
@@ -226,22 +573,155 @@ function calcular(){
   render(cap);
 }
 
+function setHis(){
+  $('bHis').innerHTML=SAVED?'<i data-lucide="check" class="w-4 h-4"></i> Guardado en histórico':'<i data-lucide="cloud-upload" class="w-4 h-4"></i> Guardar en histórico';
+}
+
 function render(cap){
   $('res').classList.remove('hide');
   const tu=LPNS.reduce((s,l)=>s+l.lines.reduce((a,x)=>a+x.units,0),0),tv=LPNS.reduce((s,l)=>s+l.vol,0);
-  $('kpis').innerHTML='<div><b>'+LPNS.length+'</b><small>LPN generados</small></div><div><b>'+tu.toLocaleString('es-PE')+'</b><small>unidades asignadas</small></div><div><b>'+tv.toFixed(4)+'</b><small>volumen total</small></div>';
-  $('alerts').innerHTML=ERR.length?'<div class="alert" style="margin-top:12px"><b>Revisar antes de usar</b><ul>'+ERR.map(e=>'<li>'+e+'</li>').join('')+'</ul></div>':'';
+  
+  // Executive KPI Cards
+  $('kpisCardsContainer').innerHTML=`
+    <div class="bg-white p-5 rounded-xl border border-slate-200/90 shadow-sm flex items-center justify-between">
+      <div>
+        <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">LPNs Generados</span>
+        <div class="text-3xl font-extrabold text-slate-900 mt-1 font-mono">${LPNS.length}</div>
+        <span class="text-xs text-slate-500">Bultos de picking únicos</span>
+      </div>
+      <div class="w-12 h-12 rounded-xl bg-brand-50 text-brand-700 flex items-center justify-center">
+        <i data-lucide="package" class="w-6 h-6"></i>
+      </div>
+    </div>
+    <div class="bg-white p-5 rounded-xl border border-slate-200/90 shadow-sm flex items-center justify-between">
+      <div>
+        <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Unidades Asignadas</span>
+        <div class="text-3xl font-extrabold text-slate-900 mt-1 font-mono">${tu.toLocaleString('es-PE')}</div>
+        <span class="text-xs text-slate-500">Ítems distribuidos</span>
+      </div>
+      <div class="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center">
+        <i data-lucide="hash" class="w-6 h-6"></i>
+      </div>
+    </div>
+    <div class="bg-white p-5 rounded-xl border border-slate-200/90 shadow-sm flex items-center justify-between">
+      <div>
+        <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Volumen Total</span>
+        <div class="text-3xl font-extrabold text-slate-900 mt-1 font-mono">${tv.toFixed(4)}</div>
+        <span class="text-xs text-slate-500">Capacidad cúbica neta</span>
+      </div>
+      <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
+        <i data-lucide="scale" class="w-6 h-6"></i>
+      </div>
+    </div>
+  `;
+
+  // Alerts box
+  $('alerts').innerHTML=ERR.length?`
+    <div class="bg-amber-50 border border-amber-200/80 rounded-xl p-4 text-amber-900 text-xs shadow-sm">
+      <div class="flex items-center gap-2 font-bold mb-1.5 text-amber-950">
+        <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600"></i>
+        <span>Observaciones de Control (${ERR.length})</span>
+      </div>
+      <ul class="list-disc list-inside space-y-1 font-mono text-xs text-amber-800">
+        ${ERR.map(e=>'<li>'+esc(e)+'</li>').join('')}
+      </ul>
+    </div>`: '';
+
+  // Executive Cards for each LPN
   $('lpns').innerHTML=LPNS.map(l=>{
     const pct=Math.min(100,l.vol/cap*100);
-    return '<div class="lpn"><div class="lpn-h"><div>'+l.lpn+' <span>Orden '+l.orden+' · bulto '+l.n+' de '+l.of+'</span></div><div>'+l.vol.toFixed(4)+' / '+cap+' <span>('+pct.toFixed(1)+'%)</span></div></div><div class="fill"><i style="width:'+pct+'%"></i></div>'+
-    '<div class="tw"><table><thead><tr><th>Producto</th><th>Descripción</th><th class="n">Vol. unitario</th><th class="n">Unidades</th><th class="n">Volumen (unit. × unid.)</th></tr></thead><tbody>'+
-    l.lines.map(x=>'<tr><td>'+x.code+(x.parte?' <small style="color:var(--warn)">(parcial)</small>':'')+'</td><td>'+(x.r.DESCRIPCION||'')+'</td><td class="n">'+volDe(x.code)+'</td><td class="n">'+x.units+'</td><td class="n">'+x.vol.toFixed(5)+'</td></tr>').join('')+'</tbody></table></div></div>'}).join('');
+    const badgeColor = pct > 95 ? 'bg-amber-500' : 'bg-emerald-600';
+    return `
+      <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden transition-all hover:border-slate-300">
+        <!-- LPN Header -->
+        <div class="px-5 py-3.5 bg-slate-50/80 border-b border-slate-200/80 flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center gap-3">
+            <span class="font-mono text-sm font-bold text-slate-900 px-2.5 py-1 bg-white border border-slate-200 rounded-lg shadow-sm">${esc(l.lpn)}</span>
+            <span class="text-xs text-slate-500">
+              Orden <strong class="text-slate-800 font-mono">${esc(l.orden)}</strong> · Bulto <span class="font-semibold text-slate-700">${l.n}</span> de ${l.of}
+            </span>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="text-right">
+              <span class="text-xs font-mono font-bold text-slate-800">${l.vol.toFixed(4)}</span>
+              <span class="text-xs text-slate-500">/ ${cap}</span>
+            </div>
+            <span class="text-xs font-mono font-bold px-2 py-0.5 rounded-full ${pct>90?'bg-amber-100 text-amber-800':'bg-emerald-100 text-emerald-800'}">
+              ${pct.toFixed(1)}%
+            </span>
+          </div>
+        </div>
+        <!-- Progress bar -->
+        <div class="w-full h-1.5 bg-slate-100">
+          <div class="${badgeColor} h-1.5 progress-glow" style="width:${pct}%"></div>
+        </div>
+        <!-- Table -->
+        <div class="table-container overflow-x-auto">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr class="border-b border-slate-100 bg-slate-50/40 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                <th class="py-2.5 px-4">Producto</th>
+                <th class="py-2.5 px-4">Descripción</th>
+                <th class="py-2.5 px-4 text-right">Vol. Unit</th>
+                <th class="py-2.5 px-4 text-right">Unidades</th>
+                <th class="py-2.5 px-4 text-right">Vol. Total</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 text-slate-700">
+              ${l.lines.map(x=>`
+                <tr class="hover:bg-slate-50/80 transition-colors">
+                  <td class="py-2.5 px-4 font-mono font-semibold text-slate-900">
+                    ${esc(x.code)}${x.parte?' <span class="inline-block px-1.5 py-0.5 rounded text-xs font-sans font-medium bg-amber-100 text-amber-800">Parcial</span>':''}
+                  </td>
+                  <td class="py-2.5 px-4 max-w-xs truncate text-slate-600">${esc(x.r.DESCRIPCION||'-')}</td>
+                  <td class="py-2.5 px-4 text-right font-mono text-slate-500">${volDe(x.code)}</td>
+                  <td class="py-2.5 px-4 text-right font-mono font-bold text-slate-800">${x.units}</td>
+                  <td class="py-2.5 px-4 text-right font-mono font-medium text-slate-900">${x.vol.toFixed(5)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Resumen Códigos por LPN
   const m=codigoLpn();
-  $('resumen').innerHTML=m.length?'<h2 style="margin:0 0 8px;font-size:15px">Códigos por LPN</h2><div class="tw"><table><thead><tr><th>Orden</th><th>Producto</th><th>Descripción</th><th class="n">Total</th><th>LPN (unidades)</th></tr></thead><tbody>'+
-    m.map(x=>'<tr><td>'+x.orden+'</td><td>'+x.code+'</td><td>'+x.desc+'</td><td class="n">'+x.total+'</td><td>'+x.lpns+'</td></tr>').join('')+'</tbody></table></div>':'';
+  $('resumenBadgeCount').textContent = m.length + ' ítems';
+  $('resumen').innerHTML=m.length?`
+    <table class="w-full text-left text-xs border-collapse">
+      <thead>
+        <tr class="border-b border-slate-200 bg-slate-100/60 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+          <th class="py-3 px-4 font-bold">Orden</th>
+          <th class="py-3 px-4 font-bold">Producto</th>
+          <th class="py-3 px-4 font-bold">Descripción</th>
+          <th class="py-3 px-4 font-bold text-right">Total Unid.</th>
+          <th class="py-3 px-4 font-bold">LPNs Asignados (Unidades)</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100 text-slate-700 font-sans">
+        ${m.map(x=>`
+          <tr class="hover:bg-slate-50/70 transition-colors">
+            <td class="py-2.5 px-4 font-mono font-bold text-slate-900">${esc(x.orden)}</td>
+            <td class="py-2.5 px-4 font-mono font-semibold text-brand-700">${esc(x.code)}</td>
+            <td class="py-2.5 px-4 text-slate-600">${esc(x.desc)}</td>
+            <td class="py-2.5 px-4 text-right font-mono font-bold text-slate-900">${x.total}</td>
+            <td class="py-2.5 px-4 font-mono text-xs text-slate-600">${esc(x.lpns)}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  ` : '<div class="p-6 text-center text-xs text-slate-500">Sin datos de resumen</div>';
+
   $('bPdf').disabled=$('bXls').disabled=$('bDet').disabled=$('bPla').disabled=!LPNS.length;
   $('bHis').disabled=!(LPNS.length&&APPS_URL&&CFG.ok&&!SAVED);
-  $('bHis').textContent=SAVED?'Guardado en histórico ✓':'Guardar en histórico';
+  setHis();
+
+  // Render icons dynamically
+  if (window.lucide) {
+    lucide.createIcons();
+  }
 }
 
 function codigoLpn(){
@@ -250,13 +730,13 @@ function codigoLpn(){
     mp[k].total+=x.units;mp[k].p.push(l.lpn+' ('+x.units+')')}));
   return ord.map(x=>({orden:x.orden,code:x.code,desc:x.desc,total:x.total,lpns:x.p.join(', ')}));
 }
+
 function pdf(L,nombre){
   L=Array.isArray(L)?L:LPNS;
   const {jsPDF}=window.jspdf;const doc=new jsPDF({orientation:'landscape',unit:'pt',format:'a4'});
   const W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight();
   const now=new Date(),hh=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
-  const pages=[]; // {k, pg}
-  // una sección por orden, con todos sus LPN dentro de la misma tabla
+  const pages=[];
   const grupos=[];const gi={};
   L.forEach(l=>{if(!(l.orden in gi)){gi[l.orden]=grupos.length;grupos.push({k:l.orden,head:l.head,lpns:[]})}grupos[gi[l.orden]].lpns.push(l)});
   grupos.forEach((g,i)=>{
@@ -298,7 +778,6 @@ function pdf(L,nombre){
       columnStyles:{0:{cellWidth:46,fontStyle:'bold'},1:{cellWidth:26},2:{cellWidth:50},3:{cellWidth:76},4:{cellWidth:178},5:{cellWidth:74},6:{cellWidth:58},7:{cellWidth:46},8:{cellWidth:62,halign:'right'},9:{cellWidth:46,halign:'right'},10:{cellWidth:42,halign:'right'},11:{cellWidth:48,halign:'right'}},
       didDrawPage:cabecera});
   });
-  // "Página x de y" por orden
   const total={};pages.forEach(p=>{total[p.k]=(total[p.k]||0)+1});const cnt={};
   pages.forEach(p=>{cnt[p.k]=(cnt[p.k]||0)+1;doc.setPage(p.pg);doc.setFontSize(9);doc.setTextColor(0);
     const t='Página '+cnt[p.k]+' de '+total[p.k];doc.text(t,560,38);doc.text(t,W-90,H-52)});
@@ -312,7 +791,6 @@ function xls(){
   XLSX.writeFile(wb,'DETALLE_LPN.xls',{bookType:'biff8'});
 }
 
-// Detalle del pedido: solo ORDEN, PEDIDO, LPN, CODIGO, LOTE, EXPIRA, CANTIDAD
 function detalle(){
   const out=[];
   LPNS.forEach(l=>l.lines.forEach(x=>out.push({
@@ -329,7 +807,6 @@ function detalle(){
   XLSX.writeFile(wb,'DETALLE_PEDIDOS_LPN.xls',{bookType:'biff8'});
 }
 
-// Mismo formato (columnas y orden) del archivo PLANTILLA_PEDIDOS cargado, una fila por línea dentro de cada LPN
 const PLA_COLS=['ORDEN','HCUST','CLIENTE','DIR','CODZON','UBIGEO','HSHIP','PEDIDO','FECHA','FECHA CITA','HORA','ALM','UBIC','CHK','PRODUCTO','DESCRIPCION','COD.EAN','DUP','ALOT','LOTE CLIENTE','LANALIS','EXPIRA','EXPDTE','CANTIDAD','CMFTXC','FACTOR DE EMPAQUE','CAJAS','CSALDO'];
 function plantilla(){
   const out=[];
@@ -346,7 +823,6 @@ function plantilla(){
   XLSX.writeFile(wb,'PLANTILLA_PEDIDOS.xls',{bookType:'biff8'});
 }
 
-// ===== Regenerar pedido: vuelve a armar el PDF de picking desde HISTORICO_LPN =====
 let REGL=[];
 function reconstruir(header,rows){
   ['ORDEN','LPN','CODIGO','CANTIDAD','CLIENTE','FACTOR DE EMPAQUE'].forEach(c=>{if(header.indexOf(c)<0)throw new Error('el histórico no tiene la columna '+c+'; actualiza el script y guarda de nuevo')});
@@ -360,33 +836,57 @@ function reconstruir(header,rows){
   });
   return L;
 }
+
 async function buscarReg(){
   const st=$('stReg'),campo=$('regCampo').value,d=$('regDesde').value.trim(),h=$('regHasta').value.trim()||d;
   REGL=[];$('bRegPdf').disabled=true;$('regTabla').innerHTML='';
-  if(!APPS_URL){st.textContent='Falta conectar el Sheet (APPS_URL vacía).';st.className='st err';return}
-  if(!d||isNaN(Number(d))||isNaN(Number(h))){st.textContent='Escribe un número en Desde (y en Hasta si usas rango).';st.className='st err';return}
-  st.textContent='Buscando…';st.className='st';$('bRegBuscar').disabled=true;
+  if(!APPS_URL){st.innerHTML='<span class="text-rose-600">Falta conectar el Sheet (APPS_URL vacía).</span>';return}
+  if(!d||isNaN(Number(d))||isNaN(Number(h))){st.innerHTML='<span class="text-rose-600">Escribe un número válido en Desde (y en Hasta si usas rango).</span>';return}
+  st.innerHTML='<span class="text-indigo-600">Consultando base histórica de pedidos...</span>';
+  $('bRegBuscar').disabled=true;
   try{
     const q='?action=historico&campo='+encodeURIComponent(campo)+'&desde='+encodeURIComponent(d)+'&hasta='+encodeURIComponent(h)+'&t='+Date.now();
     const res=await fetch(APPS_URL+q,{cache:'no-store'}),j=await res.json();
     if(!j.ok)throw new Error(j.error||'respuesta inválida');
-    if(!j.rows.length){st.textContent='No hay pedidos guardados en ese rango.';st.className='st err'}
+    if(!j.rows.length){st.innerHTML='<span class="text-amber-600 font-semibold">No se encontraron pedidos en ese rango.</span>'}
     else{
       REGL=reconstruir(j.header,j.rows);
       const og={};REGL.forEach(l=>{(og[l.orden]=og[l.orden]||{orden:l.orden,pedido:l.head.PEDIDO,cliente:l.head.CLIENTE,lpn:[]}).lpn.push(l.lpn)});
       const ords=Object.keys(og);
-      st.textContent=j.rows.length+' líneas · '+ords.length+' orden(es) · '+REGL.length+' LPN. Listo para generar el PDF.';st.className='st ok';
-      $('regTabla').innerHTML='<table><thead><tr><th>Orden</th><th>Pedido</th><th>Cliente</th><th>LPN</th></tr></thead><tbody>'+
-        ords.map(k=>{const o=og[k];return '<tr><td>'+o.orden+'</td><td>'+o.pedido+'</td><td>'+o.cliente+'</td><td>'+o.lpn.join(', ')+'</td></tr>'}).join('')+'</tbody></table>';
+      st.innerHTML='<span class="text-emerald-700 font-bold">'+j.rows.length+' registros encontrados</span> · '+ords.length+' orden(es) · '+REGL.length+' LPNs listos para imprimir.';
+      $('regTabla').innerHTML=`
+        <table class="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr class="bg-slate-100 text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+              <th class="py-2.5 px-4">Orden</th>
+              <th class="py-2.5 px-4">Pedido</th>
+              <th class="py-2.5 px-4">Cliente</th>
+              <th class="py-2.5 px-4">LPNs Asignados</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            ${ords.map(k=>{
+              const o=og[k];
+              return `
+                <tr class="hover:bg-slate-50 transition-colors">
+                  <td class="py-2 px-4 font-mono font-bold text-slate-900">${esc(o.orden)}</td>
+                  <td class="py-2 px-4 font-mono text-slate-700">${esc(o.pedido)}</td>
+                  <td class="py-2 px-4 text-slate-600 font-medium">${esc(o.cliente)}</td>
+                  <td class="py-2 px-4 font-mono text-xs text-slate-500">${esc(o.lpn.join(', '))}</td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      `;
       $('bRegPdf').disabled=false;
     }
-  }catch(x){st.textContent='No se pudo buscar: '+x.message;st.className='st err'}
+  }catch(x){st.innerHTML='<span class="text-rose-600 font-bold">Error de búsqueda: '+esc(x.message)+'</span>'}
   $('bRegBuscar').disabled=false;
 }
 $('bRegBuscar').onclick=buscarReg;
 $('bRegPdf').onclick=()=>{if(REGL.length)pdf(REGL,'Picking_REGENERADO_')};
 
-// Lee del Sheet (vía Apps Script): volumen por caja y último LPN trabajado
 async function cargarConfig(){
   if(!APPS_URL){return}
   try{
@@ -396,17 +896,18 @@ async function cargarConfig(){
     CFG={ok:true,ultimo:Number(d.ultimoLpn)||0};
     $('cap').value=d.volCaja;
     $('ini').value=CFG.ultimo+1;
-    $('stCfg').textContent='Conectado al Sheet · volumen por caja: '+d.volCaja+' · último LPN trabajado: '+CFG.ultimo+' · siguiente: '+(CFG.ultimo+1)+'.';
-    $('stCfg').className='st ok';
+    $('stCfg').innerHTML='Conectado al Sheet · Vol. Caja: <strong class="text-slate-800 font-bold">'+d.volCaja+'</strong> · Último LPN: <strong class="text-slate-800 font-bold">'+CFG.ultimo+'</strong> · Siguiente: <strong class="text-brand-700 font-bold">'+(CFG.ultimo+1)+'</strong>';
+    $('connLed').className="w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-emerald-500/20";
+    $('connLabel').textContent="En Línea (LPN #"+CFG.ultimo+")";
   }catch(x){
     CFG={ok:false,ultimo:0};
-    $('stCfg').textContent='No se pudo leer la configuración del Sheet ('+x.message+'). No se podrá guardar el histórico.';
-    $('stCfg').className='st err';
+    $('stCfg').innerHTML='<span class="text-amber-600 font-medium">Sin enlace Apps Script ('+esc(x.message)+'). Histórico inactivo.</span>';
+    $('connLed').className="w-2 h-2 rounded-full bg-amber-500 ring-2 ring-amber-500/20";
+    $('connLabel').textContent="Sin Apps Script";
   }
   if(LPNS.length)render(num($('cap').value));
 }
 
-// Guarda el detalle generado en HISTORICO_LPN y el último LPN en ULTIMO_LPN
 async function guardarHistorico(){
   if(!LPNS.length||!APPS_URL||!CFG.ok||SAVED)return;
   const p=n=>String(n).padStart(2,'0'),t=new Date();
@@ -419,7 +920,6 @@ async function guardarHistorico(){
       T(r.ALM),T(r.UBIC),T(r.CHK),T(r.DESCRIPCION),T(r['COD.EAN']),num(r['FACTOR DE EMPAQUE'])||1])}));
   $('bHis').disabled=true;$('bHis').textContent='Guardando…';
   try{
-    // text/plain evita el preflight CORS de Apps Script
     const r=await fetch(APPS_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({rows,primerLpn:PRIM,ultimoLpn:ULT})});
     const d=await r.json();
     if(!d.ok){
@@ -428,10 +928,10 @@ async function guardarHistorico(){
     }
     CFG.ultimo=Number(d.ultimoLpn);SAVED=true;
     $('ini').value=CFG.ultimo+1;
-    $('stCfg').textContent='Guardado: '+d.guardadas+' filas en HISTORICO_LPN · último LPN trabajado: '+CFG.ultimo+' · siguiente: '+(CFG.ultimo+1)+'.';
-    $('stCfg').className='st ok';
+    $('stCfg').innerHTML='<span class="text-emerald-700 font-bold">Guardado exitoso: '+d.guardadas+' filas en HISTORICO_LPN. Último LPN: '+CFG.ultimo+'</span>';
+    $('connLabel').textContent="LPN #"+CFG.ultimo+" Guardado";
   }catch(x){
-    $('stCfg').textContent='No se guardó: '+x.message;$('stCfg').className='st err';
+    $('stCfg').innerHTML='<span class="text-rose-600 font-bold">Error al guardar: '+esc(x.message)+'</span>';
     alert('No se guardó en el histórico:\n'+x.message);
   }
   render(num($('cap').value));
@@ -441,6 +941,12 @@ $('bCalc').onclick=calcular;$('bPdf').onclick=()=>pdf();$('bXls').onclick=xls;$(
 refresh();
 cargarSheet();
 cargarConfig();
+
+window.addEventListener('DOMContentLoaded', () => {
+  if (window.lucide) {
+    lucide.createIcons();
+  }
+});
 </script>
 </body>
 </html>
