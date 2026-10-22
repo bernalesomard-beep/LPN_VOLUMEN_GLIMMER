@@ -72,10 +72,11 @@ td.n,th.n{text-align:right}
     <section class="card">
       <h2><span class="step">3</span>Parámetros</h2>
       <div class="row">
-        <div><label for="cap">Volumen por LPN</label><input type="number" id="cap" value="0.1033" step="0.0001" min="0"></div>
+        <div><label for="cap">Volumen por LPN</label><input type="number" id="cap" value="0.0203" step="0.0001" min="0"></div>
         <div><label for="pre">Prefijo LPN</label><input type="text" id="pre" value="" placeholder="(opcional)"></div>
         <div><label for="ini">Primer LPN</label><input type="number" id="ini" value="1" min="1"></div>
       </div>
+      <div class="st" id="stCfg">Histórico y último LPN: sin conexión (falta la URL del script).</div>
       <div class="st">Un código va completo en un solo LPN. Solo si supera el volumen de un LPN se parte, en múltiplos del factor de empaque (cajas completas).</div>
     </section>
   </div>
@@ -87,6 +88,7 @@ td.n,th.n{text-align:right}
       <button id="bXls" class="sec" disabled>Descargar XLS</button>
       <button id="bDet" class="sec" disabled>Descargar detalle del pedido</button>
       <button id="bPla" class="sec" disabled>Descargar PLANTILLA_PEDIDOS (.xls)</button>
+      <button id="bHis" disabled>Guardar en histórico</button>
     </div>
     <div id="res" class="hide">
       <div class="kpis" style="margin-top:14px" id="kpis"></div>
@@ -95,12 +97,32 @@ td.n,th.n{text-align:right}
       <div id="lpns"></div>
     </div>
   </section>
+
+  <section class="card">
+    <h2>Regenerar pedido</h2>
+    <div class="st" style="margin-top:0">Vuelve a imprimir el PDF de picking de pedidos ya guardados en el histórico. No crea LPN nuevos ni cambia el último LPN.</div>
+    <div class="row" style="margin-top:8px">
+      <div><label for="regCampo">Buscar por</label>
+        <select id="regCampo" style="width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:6px;font:inherit;background:#fff"><option value="PEDIDO">Pedido</option><option value="ORDEN">Orden</option></select></div>
+      <div><label for="regDesde">Desde</label><input type="text" id="regDesde" inputmode="numeric" placeholder="ej. 4900011934"></div>
+      <div><label for="regHasta">Hasta (opcional)</label><input type="text" id="regHasta" inputmode="numeric" placeholder="igual a Desde"></div>
+    </div>
+    <div class="bar" style="margin-top:12px">
+      <button class="sec" id="bRegBuscar">Buscar en histórico</button>
+      <button id="bRegPdf" disabled>Descargar PDF regenerado</button>
+    </div>
+    <div class="st" id="stReg">Escribe un rango y pulsa Buscar.</div>
+    <div class="tw" id="regTabla"></div>
+  </section>
 </main>
 
 <script>
 const SHEET_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTv7UOlzavB9YZqWbwzrTyIrL5uuM8Zs69Xjpdf3nl8HAN8zBJ1R6ADyale7RiS_n5cg7tvhu4FiWeJ/pub?gid=0&single=true&output=csv';
+// URL de la aplicación web de Apps Script (termina en /exec). Si queda vacía, no hay histórico ni último LPN.
+const APPS_URL='https://script.google.com/macros/s/AKfycbyJzvnXL6rh-V7pOMOgEJ7afB2YN84OdpZKe7TFK-kSjiMGoRbSxrwGrpB_KF9TJ9qnNQ/exec';
 const $=id=>document.getElementById(id);
 let VOL={}, PED=[], LPNS=[], ERR=[], COLS=[];
+let CFG={ok:false,ultimo:0}, PRIM=1, ULT=0, SAVED=false;
 const norm=v=>String(v==null?'':v).trim().toUpperCase();
 const num=v=>{const n=parseFloat(String(v==null?'':v).replace(',','.'));return isNaN(n)?0:n};
 const MES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
@@ -167,8 +189,14 @@ $('fPed').onchange=async e=>{const f=e.target.files[0];if(!f)return;
 function refresh(){$('bCalc').disabled=!(PED.length&&Object.keys(VOL).length)}
 
 function calcular(){
-  const cap=num($('cap').value),pre=$('pre').value.trim(),ini=Math.max(1,parseInt($('ini').value)||1),E=1e-9;
-  LPNS=[];ERR=[];let seq=ini;
+  const cap=num($('cap').value),pre=$('pre').value.trim(),E=1e-9;
+  let ini=Math.max(1,parseInt($('ini').value)||1);
+  LPNS=[];ERR=[];
+  if(CFG.ok&&ini<=CFG.ultimo){
+    ERR.push('El primer LPN se ajustó a '+(CFG.ultimo+1)+' porque el último LPN trabajado fue '+CFG.ultimo+'.');
+    ini=CFG.ultimo+1;$('ini').value=ini;
+  }
+  let seq=ini;
   const orders=[];const idx={};
   PED.forEach(r=>{const k=String(r.ORDEN);if(!(k in idx)){idx[k]=orders.length;orders.push({k,rows:[]})}orders[idx[k]].rows.push(r)});
   orders.forEach(o=>{
@@ -194,6 +222,7 @@ function calcular(){
     });
   });
   LPNS.forEach(l=>{const g=LPNS.filter(x=>x.orden===l.orden);l.of=g.length;l.n=g.indexOf(l)+1});
+  PRIM=ini;ULT=seq-1;SAVED=false;
   render(cap);
 }
 
@@ -211,6 +240,8 @@ function render(cap){
   $('resumen').innerHTML=m.length?'<h2 style="margin:0 0 8px;font-size:15px">Códigos por LPN</h2><div class="tw"><table><thead><tr><th>Orden</th><th>Producto</th><th>Descripción</th><th class="n">Total</th><th>LPN (unidades)</th></tr></thead><tbody>'+
     m.map(x=>'<tr><td>'+x.orden+'</td><td>'+x.code+'</td><td>'+x.desc+'</td><td class="n">'+x.total+'</td><td>'+x.lpns+'</td></tr>').join('')+'</tbody></table></div>':'';
   $('bPdf').disabled=$('bXls').disabled=$('bDet').disabled=$('bPla').disabled=!LPNS.length;
+  $('bHis').disabled=!(LPNS.length&&APPS_URL&&CFG.ok&&!SAVED);
+  $('bHis').textContent=SAVED?'Guardado en histórico ✓':'Guardar en histórico';
 }
 
 function codigoLpn(){
@@ -219,14 +250,15 @@ function codigoLpn(){
     mp[k].total+=x.units;mp[k].p.push(l.lpn+' ('+x.units+')')}));
   return ord.map(x=>({orden:x.orden,code:x.code,desc:x.desc,total:x.total,lpns:x.p.join(', ')}));
 }
-function pdf(){
+function pdf(L,nombre){
+  L=Array.isArray(L)?L:LPNS;
   const {jsPDF}=window.jspdf;const doc=new jsPDF({orientation:'landscape',unit:'pt',format:'a4'});
   const W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight();
   const now=new Date(),hh=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
   const pages=[]; // {k, pg}
   // una sección por orden, con todos sus LPN dentro de la misma tabla
   const grupos=[];const gi={};
-  LPNS.forEach(l=>{if(!(l.orden in gi)){gi[l.orden]=grupos.length;grupos.push({k:l.orden,head:l.head,lpns:[]})}grupos[gi[l.orden]].lpns.push(l)});
+  L.forEach(l=>{if(!(l.orden in gi)){gi[l.orden]=grupos.length;grupos.push({k:l.orden,head:l.head,lpns:[]})}grupos[gi[l.orden]].lpns.push(l)});
   grupos.forEach((g,i)=>{
     if(i>0)doc.addPage();
     const h=g.head;
@@ -270,7 +302,7 @@ function pdf(){
   const total={};pages.forEach(p=>{total[p.k]=(total[p.k]||0)+1});const cnt={};
   pages.forEach(p=>{cnt[p.k]=(cnt[p.k]||0)+1;doc.setPage(p.pg);doc.setFontSize(9);doc.setTextColor(0);
     const t='Página '+cnt[p.k]+' de '+total[p.k];doc.text(t,560,38);doc.text(t,W-90,H-52)});
-  doc.save('Picking_LPN_'+LPNS[0].orden+(grupos.length>1?'_y_otros':'')+'.pdf');
+  doc.save((nombre||'Picking_LPN_')+L[0].orden+(grupos.length>1?'_y_otros':'')+'.pdf');
 }
 
 function xls(){
@@ -298,22 +330,117 @@ function detalle(){
 }
 
 // Mismo formato (columnas y orden) del archivo PLANTILLA_PEDIDOS cargado, una fila por línea dentro de cada LPN
+const PLA_COLS=['ORDEN','HCUST','CLIENTE','DIR','CODZON','UBIGEO','HSHIP','PEDIDO','FECHA','FECHA CITA','HORA','ALM','UBIC','CHK','PRODUCTO','DESCRIPCION','COD.EAN','DUP','ALOT','LOTE CLIENTE','LANALIS','EXPIRA','EXPDTE','CANTIDAD','CMFTXC','FACTOR DE EMPAQUE','CAJAS','CSALDO'];
 function plantilla(){
   const out=[];
   LPNS.forEach(l=>l.lines.forEach(x=>{
-    const o={};COLS.forEach(c=>o[c]=x.r[c]);
+    const o={};PLA_COLS.forEach(c=>o[c]=(x.r[c]===undefined?'':x.r[c]));
+    const f=num(x.r['FACTOR DE EMPAQUE'])||1,c=Math.floor(x.units/f);
     o.CANTIDAD=x.units;
-    if('LPN' in o)o.LPN=l.lpn;
+    o.CAJAS=c;
+    o.CSALDO=x.units-c*f;
     out.push(o);
   }));
   const wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(out,{header:COLS}),'PLANTILLA_PEDIDOS');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(out,{header:PLA_COLS}),'Hoja1');
   XLSX.writeFile(wb,'PLANTILLA_PEDIDOS.xls',{bookType:'biff8'});
 }
 
-$('bCalc').onclick=calcular;$('bPdf').onclick=pdf;$('bXls').onclick=xls;$('bDet').onclick=detalle;$('bPla').onclick=plantilla;
+// ===== Regenerar pedido: vuelve a armar el PDF de picking desde HISTORICO_LPN =====
+let REGL=[];
+function reconstruir(header,rows){
+  ['ORDEN','LPN','CODIGO','CANTIDAD','CLIENTE','FACTOR DE EMPAQUE'].forEach(c=>{if(header.indexOf(c)<0)throw new Error('el histórico no tiene la columna '+c+'; actualiza el script y guarda de nuevo')});
+  const L=[],mapa={};
+  rows.forEach(a=>{
+    const r={};header.forEach((h,i)=>r[h]=a[i]);
+    r['LOTE CLIENTE']=r.LOTE;
+    const k=r.ORDEN+'|'+r.LPN;
+    if(!mapa[k]){mapa[k]={orden:String(r.ORDEN),head:r,lpn:String(r.LPN),lines:[],vol:0};L.push(mapa[k])}
+    mapa[k].lines.push({r,code:String(r.CODIGO),units:num(r.CANTIDAD),vol:0,parte:false});
+  });
+  return L;
+}
+async function buscarReg(){
+  const st=$('stReg'),campo=$('regCampo').value,d=$('regDesde').value.trim(),h=$('regHasta').value.trim()||d;
+  REGL=[];$('bRegPdf').disabled=true;$('regTabla').innerHTML='';
+  if(!APPS_URL){st.textContent='Falta conectar el Sheet (APPS_URL vacía).';st.className='st err';return}
+  if(!d||isNaN(Number(d))||isNaN(Number(h))){st.textContent='Escribe un número en Desde (y en Hasta si usas rango).';st.className='st err';return}
+  st.textContent='Buscando…';st.className='st';$('bRegBuscar').disabled=true;
+  try{
+    const q='?action=historico&campo='+encodeURIComponent(campo)+'&desde='+encodeURIComponent(d)+'&hasta='+encodeURIComponent(h)+'&t='+Date.now();
+    const res=await fetch(APPS_URL+q,{cache:'no-store'}),j=await res.json();
+    if(!j.ok)throw new Error(j.error||'respuesta inválida');
+    if(!j.rows.length){st.textContent='No hay pedidos guardados en ese rango.';st.className='st err'}
+    else{
+      REGL=reconstruir(j.header,j.rows);
+      const og={};REGL.forEach(l=>{(og[l.orden]=og[l.orden]||{orden:l.orden,pedido:l.head.PEDIDO,cliente:l.head.CLIENTE,lpn:[]}).lpn.push(l.lpn)});
+      const ords=Object.keys(og);
+      st.textContent=j.rows.length+' líneas · '+ords.length+' orden(es) · '+REGL.length+' LPN. Listo para generar el PDF.';st.className='st ok';
+      $('regTabla').innerHTML='<table><thead><tr><th>Orden</th><th>Pedido</th><th>Cliente</th><th>LPN</th></tr></thead><tbody>'+
+        ords.map(k=>{const o=og[k];return '<tr><td>'+o.orden+'</td><td>'+o.pedido+'</td><td>'+o.cliente+'</td><td>'+o.lpn.join(', ')+'</td></tr>'}).join('')+'</tbody></table>';
+      $('bRegPdf').disabled=false;
+    }
+  }catch(x){st.textContent='No se pudo buscar: '+x.message;st.className='st err'}
+  $('bRegBuscar').disabled=false;
+}
+$('bRegBuscar').onclick=buscarReg;
+$('bRegPdf').onclick=()=>{if(REGL.length)pdf(REGL,'Picking_REGENERADO_')};
+
+// Lee del Sheet (vía Apps Script): volumen por caja y último LPN trabajado
+async function cargarConfig(){
+  if(!APPS_URL){return}
+  try{
+    const r=await fetch(APPS_URL+'?t='+Date.now(),{cache:'no-store'});
+    const d=await r.json();
+    if(!d.ok)throw new Error(d.error||'respuesta inválida');
+    CFG={ok:true,ultimo:Number(d.ultimoLpn)||0};
+    $('cap').value=d.volCaja;
+    $('ini').value=CFG.ultimo+1;
+    $('stCfg').textContent='Conectado al Sheet · volumen por caja: '+d.volCaja+' · último LPN trabajado: '+CFG.ultimo+' · siguiente: '+(CFG.ultimo+1)+'.';
+    $('stCfg').className='st ok';
+  }catch(x){
+    CFG={ok:false,ultimo:0};
+    $('stCfg').textContent='No se pudo leer la configuración del Sheet ('+x.message+'). No se podrá guardar el histórico.';
+    $('stCfg').className='st err';
+  }
+  if(LPNS.length)render(num($('cap').value));
+}
+
+// Guarda el detalle generado en HISTORICO_LPN y el último LPN en ULTIMO_LPN
+async function guardarHistorico(){
+  if(!LPNS.length||!APPS_URL||!CFG.ok||SAVED)return;
+  const p=n=>String(n).padStart(2,'0'),t=new Date();
+  const ts=t.getFullYear()+'-'+p(t.getMonth()+1)+'-'+p(t.getDate())+' '+p(t.getHours())+':'+p(t.getMinutes())+':'+p(t.getSeconds());
+  const rows=[];
+  const T=v=>String(v==null?'':v);
+  LPNS.forEach(l=>l.lines.forEach(x=>{const r=x.r;
+    rows.push([ts,T(l.orden),T(r.PEDIDO),l.lpn,x.code,T(r['LOTE CLIENTE']),T(r.EXPIRA),x.units,
+      T(r.HCUST),T(r.CLIENTE),T(r.DIR).trim(),T(r.CODZON),T(r.UBIGEO),T(r.HSHIP),T(r.FECHA),T(r['FECHA CITA']),T(r.HORA),
+      T(r.ALM),T(r.UBIC),T(r.CHK),T(r.DESCRIPCION),T(r['COD.EAN']),num(r['FACTOR DE EMPAQUE'])||1])}));
+  $('bHis').disabled=true;$('bHis').textContent='Guardando…';
+  try{
+    // text/plain evita el preflight CORS de Apps Script
+    const r=await fetch(APPS_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({rows,primerLpn:PRIM,ultimoLpn:ULT})});
+    const d=await r.json();
+    if(!d.ok){
+      if(d.ultimoLpn!==undefined){CFG.ultimo=Number(d.ultimoLpn)||CFG.ultimo;$('ini').value=CFG.ultimo+1}
+      throw new Error(d.error||'error desconocido');
+    }
+    CFG.ultimo=Number(d.ultimoLpn);SAVED=true;
+    $('ini').value=CFG.ultimo+1;
+    $('stCfg').textContent='Guardado: '+d.guardadas+' filas en HISTORICO_LPN · último LPN trabajado: '+CFG.ultimo+' · siguiente: '+(CFG.ultimo+1)+'.';
+    $('stCfg').className='st ok';
+  }catch(x){
+    $('stCfg').textContent='No se guardó: '+x.message;$('stCfg').className='st err';
+    alert('No se guardó en el histórico:\n'+x.message);
+  }
+  render(num($('cap').value));
+}
+
+$('bCalc').onclick=calcular;$('bPdf').onclick=()=>pdf();$('bXls').onclick=xls;$('bDet').onclick=detalle;$('bPla').onclick=plantilla;$('bHis').onclick=guardarHistorico;
 refresh();
 cargarSheet();
+cargarConfig();
 </script>
 </body>
 </html>
