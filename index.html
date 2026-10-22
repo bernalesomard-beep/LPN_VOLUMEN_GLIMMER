@@ -96,7 +96,7 @@
             <span class="w-2 h-2 rounded-full bg-slate-400 ring-2 ring-slate-400/20" id="connLed"></span>
             <span id="connLabel" class="font-mono text-xs">Sincronizando...</span>
           </div>
-          <a href="#section-regenerar" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-colors border border-transparent hover:border-slate-700">
+          <a href="#" id="lnkHist" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-colors border border-transparent hover:border-slate-700">
             <i data-lucide="history" class="w-3.5 h-3.5"></i>
             Histórico
           </a>
@@ -125,6 +125,20 @@
 
   <!-- MAIN WORKSPACE -->
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 space-y-8 w-full">
+
+    <!-- PESTAÑAS -->
+    <nav class="flex gap-2 border-b border-slate-200" role="tablist" aria-label="Secciones">
+      <button id="tabDivision" type="button" role="tab" aria-selected="true"
+        class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-t-lg border border-b-0 border-slate-200 bg-white text-slate-900 -mb-px">
+        <i data-lucide="layers" class="w-4 h-4"></i> División de pedido
+      </button>
+      <button id="tabRegenerar" type="button" role="tab" aria-selected="false"
+        class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-t-lg border border-b-0 border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100 -mb-px">
+        <i data-lucide="archive-restore" class="w-4 h-4"></i> Reimpresión desde histórico
+      </button>
+    </nav>
+
+    <div id="view-division" class="space-y-8">
 
     <!-- SECCIÓN 1: CONFIGURACIÓN Y FUENTES DE ENTRADA (3 COLUMNS) -->
     <section class="space-y-4">
@@ -158,6 +172,10 @@
                   class="block w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 cursor-pointer border border-dashed border-slate-300 rounded-lg p-2 bg-slate-50/50 group-hover:border-slate-400 transition-colors">
               </div>
               <p class="text-xs text-slate-500 mt-2">Columnas requeridas: <span class="font-mono text-slate-600">ORDEN, PRODUCTO, CANTIDAD</span> y cabeceras operativas.</p>
+              <button id="bPlaVacia" type="button" class="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-colors active:scale-95">
+                <i data-lucide="download" class="w-3.5 h-3.5 text-slate-600"></i>
+                Descargar plantilla vacía (.xls)
+              </button>
             </div>
           </div>
 
@@ -372,6 +390,9 @@
 
     </section>
 
+    </div>
+
+    <div id="view-regenerar" class="hide">
     <!-- SECCIÓN 4: REGENERACIÓN DE PEDIDOS (HISTÓRICO) -->
     <section id="section-regenerar" class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-5">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-3">
@@ -433,6 +454,7 @@
       <!-- Regenerated Results Table -->
       <div class="table-container overflow-x-auto rounded-lg border border-slate-200 shadow-sm" id="regTabla"></div>
     </section>
+    </div>
 
   </main>
 
@@ -445,7 +467,7 @@
         <span>Módulo de Picking Estándar & Cubicación LPN</span>
       </div>
       <div class="text-slate-500 text-xs">
-        Integración Google Sheets & Apps Script en tiempo real
+        «No busco demostrarle nada a nadie, mis resultados hablan por mí - Odan89»
       </div>
     </div>
   </footer>
@@ -808,6 +830,12 @@ function detalle(){
 }
 
 const PLA_COLS=['ORDEN','HCUST','CLIENTE','DIR','CODZON','UBIGEO','HSHIP','PEDIDO','FECHA','FECHA CITA','HORA','ALM','UBIC','CHK','PRODUCTO','DESCRIPCION','COD.EAN','DUP','ALOT','LOTE CLIENTE','LANALIS','EXPIRA','EXPDTE','CANTIDAD','CMFTXC','FACTOR DE EMPAQUE','CAJAS','CSALDO'];
+// Plantilla en blanco (solo cabeceras) para armar el pedido antes de subirlo
+function plantillaVacia(){
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([PLA_COLS]),'Hoja1');
+  XLSX.writeFile(wb,'PLANTILLA_PEDIDOS.xls',{bookType:'biff8'});
+}
 function plantilla(){
   const out=[];
   LPNS.forEach(l=>l.lines.forEach(x=>{
@@ -938,6 +966,21 @@ async function guardarHistorico(){
 }
 
 $('bCalc').onclick=calcular;$('bPdf').onclick=()=>pdf();$('bXls').onclick=xls;$('bDet').onclick=detalle;$('bPla').onclick=plantilla;$('bHis').onclick=guardarHistorico;
+function showTab(t){
+  const reg=t==='regenerar';
+  $('view-division').classList.toggle('hide',reg);
+  $('view-regenerar').classList.toggle('hide',!reg);
+  const on='border-slate-200 bg-white text-slate-900',off='border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100';
+  [['tabDivision',!reg],['tabRegenerar',reg]].forEach(([id,act])=>{
+    const b=$(id);b.setAttribute('aria-selected',act);
+    b.className='inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-t-lg border border-b-0 -mb-px '+(act?on:off);
+  });
+  if(window.lucide)lucide.createIcons();
+  if(reg)$('regDesde').focus();
+}
+$('tabDivision').onclick=()=>showTab('division');
+$('tabRegenerar').onclick=()=>showTab('regenerar');
+$('lnkHist').onclick=e=>{e.preventDefault();showTab('regenerar')};$('bPlaVacia').onclick=plantillaVacia;
 refresh();
 cargarSheet();
 cargarConfig();
