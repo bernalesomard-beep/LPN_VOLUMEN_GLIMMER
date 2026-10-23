@@ -807,7 +807,7 @@ function pdf(L,nombre){
 }
 
 function xls(){
-  const out=[];LPNS.forEach(l=>l.lines.forEach(x=>out.push({ORDEN:l.orden,PEDIDO:x.r.PEDIDO,LPN:l.lpn,PRODUCTO:x.code,DESCRIPCION:x.r.DESCRIPCION,UNIDADES:x.units,VOLUMEN:+x.vol.toFixed(6)})));
+  const out=[];LPNS.forEach(l=>l.lines.forEach(x=>out.push({ORDEN:l.orden,PEDIDO:x.r.PEDIDO,LPN:l.lpn,N_CAJA:l.n,TOTAL_CAJAS:l.of,PRODUCTO:x.code,DESCRIPCION:x.r.DESCRIPCION,UNIDADES:x.units,VOLUMEN:+x.vol.toFixed(6)})));
   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(out),'LPN');
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(codigoLpn().map(x=>({ORDEN:x.orden,PRODUCTO:x.code,DESCRIPCION:x.desc,TOTAL:x.total,'LPN (UNIDADES)':x.lpns}))),'CODIGO_X_LPN');
   XLSX.writeFile(wb,'DETALLE_LPN.xls',{bookType:'biff8'});
@@ -819,13 +819,14 @@ function detalle(){
     ORDEN:l.orden,
     PEDIDO:x.r.PEDIDO,
     LPN:l.lpn,
+    N_CAJA:l.n,
     CODIGO:x.code,
     LOTE:x.r['LOTE CLIENTE'],
     EXPIRA:x.r.EXPIRA,
     CANTIDAD:x.units
   })));
   const wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(out,{header:['ORDEN','PEDIDO','LPN','CODIGO','LOTE','EXPIRA','CANTIDAD']}),'DETALLE');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(out,{header:['ORDEN','PEDIDO','LPN','N_CAJA','CODIGO','LOTE','EXPIRA','CANTIDAD']}),'DETALLE');
   XLSX.writeFile(wb,'DETALLE_PEDIDOS_LPN.xls',{bookType:'biff8'});
 }
 
