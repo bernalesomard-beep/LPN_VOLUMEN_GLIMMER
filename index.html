@@ -295,6 +295,14 @@
           <p class="text-xs text-slate-400 mt-1 max-w-xl">
             Procesa el algoritmo de cubicaje para distribuir los ítems en cajas y bultos LPN, validando empaques completos y saldos.
           </p>
+          <div class="mt-3 flex flex-wrap gap-2" role="radiogroup" aria-label="Método de división">
+            <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800/70 text-xs font-semibold text-slate-200 cursor-pointer">
+              <input type="radio" name="metodo" value="volumen" checked class="accent-red-600"> Por volumen (cubicaje)
+            </label>
+            <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800/70 text-xs font-semibold text-slate-200 cursor-pointer">
+              <input type="radio" name="metodo" value="codlote" class="accent-red-600"> Por código y lote (caja master)
+            </label>
+          </div>
         </div>
 
         <!-- Action Buttons Bar -->
@@ -559,6 +567,7 @@ function refresh(){
 
 function calcular(){
   const cap=num($('cap').value),pre=$('pre').value.trim(),E=1e-9;
+  const metodo=(document.querySelector('input[name="metodo"]:checked')||{}).value||'volumen';
   let ini=Math.max(1,parseInt($('ini').value)||1);
   LPNS=[];ERR=[];
   if(CFG.ok&&ini<=CFG.ultimo){
@@ -571,6 +580,51 @@ function calcular(){
   orders.forEach(o=>{
     const head=o.rows[0];let cur=null;
     const nuevo=()=>{cur={orden:o.k,head,lpn:pre+String(seq++).padStart(6,'0'),lines:[],vol:0};LPNS.push(cur)};
+    if(metodo==='codlote'){
+      // Agrupa por código + lote (suma todas las ubicaciones) y genera 1 LPN por caja master + 1 LPN de saldo
+      const gr={},go=[];
+      o.rows.forEach(r=>{
+        const code=norm(r.PRODUCTO),lote=norm(r['LOTE CLIENTE']!==undefined?r['LOTE CLIENTE']:r.ALOT),k=code+'|'+lote;
+        if(!gr[k]){gr[k]={code,lote,rows:[]};go.push(gr[k])}
+        gr[k].rows.push(r);
+      });
+      go.forEach(g=>{
+        const uv=volDe(g.code);
+        if(uv===undefined)ERR.push('Orden '+o.k+': el código '+g.code+' no está en la maestra de volúmenes (volumen = 0, se divide igual por empaque).');
+        const v=uv>0?uv:0;
+        const f=Math.max(1,num(g.rows[0]['FACTOR DE EMPAQUE'])||1);
+        const total=g.rows.reduce((s,r)=>s+num(r.CANTIDAD),0);
+        let tam=f;
+        if(f<=1){tam=total;ERR.push('Orden '+o.k+': '+g.code+' (lote '+g.lote+') no tiene factor de empaque; se asigna todo en un solo LPN.')}
+        const nBox=Math.floor(total/tam),rem=total-nBox*tam;
+        const ub=r=>String(r.ALM==null?'':r.ALM)+'|'+String(r.UBIC==null?'':r.UBIC);
+        const pend=g.rows.map((r,ix)=>({r,ix,left:num(r.CANTIDAD)})).sort((a,b)=>ub(a.r)<ub(b.r)?-1:ub(a.r)>ub(b.r)?1:a.ix-b.ix);let i=0;
+        // 1) cajas master completas dentro de una misma ubicación
+        let nBoxProp=0;
+        if(f>1)pend.forEach(p=>{
+          const nb=Math.floor(p.left/tam);
+          for(let b=0;b<nb;b++){nuevo();cur.tipo='MASTER';cur.lines.push({r:p.r,code:g.code,units:tam,vol:tam*v,parte:tam<num(p.r.CANTIDAD),cj:1,sd:0});cur.vol+=tam*v}
+          p.left-=nb*tam;nBoxProp+=nb;
+        });
+        const sobra=pend.reduce((s,p)=>s+p.left,0),nBox2=f>1?Math.floor(sobra/tam):nBox,rem2=f>1?sobra-nBox2*tam:rem;
+        const llenar=(cant,tipo)=>{
+          nuevo();cur.tipo=tipo;let need=cant,first=true;
+          while(need>0&&i<pend.length){
+            const p=pend[i],t=Math.min(need,p.left);
+            if(t>0){
+              const ln={r:p.r,code:g.code,units:t,vol:t*v,parte:t<num(p.r.CANTIDAD)};
+              if(tipo==='MASTER'){ln.cj=first?1:0;ln.sd=0}
+              cur.lines.push(ln);cur.vol+=t*v;first=false;p.left-=t;need-=t;
+            }
+            if(p.left<=0)i++;
+          }
+        };
+        // 2) restos de varias ubicaciones se juntan para completar cajas master; lo que no alcanza es saldo
+        for(let b=0;b<nBox2;b++)llenar(tam,f<=1?'GRUPO':'MASTER');
+        if(rem2>0)llenar(rem2,'SALDO'); // el saldo queda justo después de las cajas master de su código+lote
+      });
+      return;
+    }
     o.rows.forEach(r=>{
       const code=norm(r.PRODUCTO),uv=volDe(code);
       if(uv===undefined){ERR.push('Orden '+o.k+': el código '+code+' no está en la maestra de volúmenes (omitido).');return}
@@ -661,6 +715,7 @@ function render(cap){
             <span class="font-mono text-sm font-bold text-slate-900 px-2.5 py-1 bg-white border border-slate-200 rounded-lg shadow-sm">${esc(l.lpn)}</span>
             <span class="text-xs text-slate-500">
               Orden <strong class="text-slate-800 font-mono">${esc(l.orden)}</strong> · Bulto <span class="font-semibold text-slate-700">${l.n}</span> de ${l.of}
+              ${l.tipo?'<span class="ml-1 px-1.5 py-0.5 rounded text-xs font-semibold '+(l.tipo==='SALDO'?'bg-amber-100 text-amber-800':'bg-indigo-100 text-indigo-800')+'">'+(l.tipo==='MASTER'?'Caja master':l.tipo==='SALDO'?'Saldo':'Código + lote')+'</span>':''}
             </span>
           </div>
           <div class="flex items-center gap-3">
@@ -786,7 +841,7 @@ function pdf(L,nombre){
     let TP=0,TC=0,TS=0;const body=[];
     g.lpns.forEach(l=>{
       let tp=0,tc=0,ts=0;
-      l.lines.forEach(x=>{const f=num(x.r['FACTOR DE EMPAQUE'])||1,c=Math.floor(x.units/f),s=x.units-c*f;tp+=x.units;tc+=c;ts+=s;
+      l.lines.forEach(x=>{const f=num(x.r['FACTOR DE EMPAQUE'])||1,c=x.cj!==undefined?x.cj:Math.floor(x.units/f),s=x.sd!==undefined?x.sd:x.units-c*f;tp+=x.units;tc+=c;ts+=s;
         body.push([l.lpn,x.r.ALM,String(x.r.UBIC)+' '+(x.r.CHK||''),x.code,x.r.DESCRIPCION,x.r['COD.EAN'],x.r['LOTE CLIENTE'],exp8(x.r.EXPIRA),f2(x.units),f2(f),f2(c),String(s)])});
       TP+=tp;TC+=tc;TS+=ts;
       const st={fontStyle:'bold',fillColor:[238,240,244],textColor:0};
@@ -841,10 +896,10 @@ function plantilla(){
   const out=[];
   LPNS.forEach(l=>l.lines.forEach(x=>{
     const o={};PLA_COLS.forEach(c=>o[c]=(x.r[c]===undefined?'':x.r[c]));
-    const f=num(x.r['FACTOR DE EMPAQUE'])||1,c=Math.floor(x.units/f);
+    const f=num(x.r['FACTOR DE EMPAQUE'])||1,c=x.cj!==undefined?x.cj:Math.floor(x.units/f);
     o.CANTIDAD=x.units;
     o.CAJAS=c;
-    o.CSALDO=x.units-c*f;
+    o.CSALDO=x.sd!==undefined?x.sd:x.units-c*f;
     out.push(o);
   }));
   const wb=XLSX.utils.book_new();
