@@ -331,6 +331,12 @@
             Descargar detalle del pedido
           </button>
 
+          <button id="bEmp" disabled
+            class="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl font-semibold text-xs bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 border border-slate-700 transition-all disabled:opacity-40 disabled:pointer-events-none">
+            <i data-lucide="package-check" class="w-4 h-4 text-indigo-400"></i>
+            Descargar resumen por empaque (.xls)
+          </button>
+
           <button id="bPla" disabled
             class="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl font-semibold text-xs bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 border border-slate-700 transition-all disabled:opacity-40 disabled:pointer-events-none">
             <i data-lucide="table" class="w-4 h-4 text-amber-400"></i>
@@ -791,7 +797,7 @@ function render(cap){
     </table>
   ` : '<div class="p-6 text-center text-xs text-slate-500">Sin datos de resumen</div>';
 
-  $('bPdf').disabled=$('bXls').disabled=$('bDet').disabled=$('bPla').disabled=!LPNS.length;
+  $('bPdf').disabled=$('bXls').disabled=$('bDet').disabled=$('bEmp').disabled=$('bPla').disabled=!LPNS.length;
   $('bHis').disabled=!(LPNS.length&&APPS_URL&&CFG.ok&&!SAVED);
   setHis();
 
@@ -883,6 +889,27 @@ function detalle(){
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(out,{header:['ORDEN','PEDIDO','LPN','N_CAJA','CODIGO','LOTE','EXPIRA','CANTIDAD']}),'DETALLE');
   XLSX.writeFile(wb,'DETALLE_PEDIDOS_LPN.xls',{bookType:'biff8'});
+}
+
+// Resumen por pedido / código / lote: LPN de cajas master (conteo) y, en una segunda línea, el saldo
+function resumenEmpaque(){
+  const g={},ord=[];
+  LPNS.forEach(l=>l.lines.forEach(x=>{
+    const r=x.r,k=[l.orden,r.PEDIDO,x.code,r['LOTE CLIENTE'],r.EXPIRA].join('||');
+    if(!g[k]){g[k]={ORDEN:l.orden,PEDIDO:r.PEDIDO,CODIGO:x.code,LOTE:r['LOTE CLIENTE'],EXPIRA:r.EXPIRA,f:num(r['FACTOR DE EMPAQUE'])||0,u:0};ord.push(g[k])}
+    g[k].u+=x.units;
+  }));
+  const out=[];
+  ord.forEach(o=>{
+    const base={ORDEN:o.ORDEN,PEDIDO:o.PEDIDO,CODIGO:o.CODIGO,LOTE:o.LOTE,EXPIRA:o.EXPIRA};
+    if(o.f<=1){out.push({...base,TIPO:'SIN FACTOR',CANT_LPN:'',TOTAL_UNIDADES:o.u,FACTOR_EMPAQUE:o.f||''});return}
+    const nb=Math.floor(o.u/o.f),sd=o.u-nb*o.f;
+    if(nb>0)out.push({...base,TIPO:'CAJA MASTER',CANT_LPN:nb,TOTAL_UNIDADES:nb*o.f,FACTOR_EMPAQUE:o.f});
+    if(sd>0)out.push({...base,TIPO:'SALDO',CANT_LPN:1,TOTAL_UNIDADES:sd,FACTOR_EMPAQUE:o.f});
+  });
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(out,{header:['ORDEN','PEDIDO','CODIGO','LOTE','EXPIRA','TIPO','CANT_LPN','TOTAL_UNIDADES','FACTOR_EMPAQUE']}),'RESUMEN');
+  XLSX.writeFile(wb,'RESUMEN_EMPAQUE_LPN.xls',{bookType:'biff8'});
 }
 
 const PLA_COLS=['ORDEN','HCUST','CLIENTE','DIR','CODZON','UBIGEO','HSHIP','PEDIDO','FECHA','FECHA CITA','HORA','ALM','UBIC','CHK','PRODUCTO','DESCRIPCION','COD.EAN','DUP','ALOT','LOTE CLIENTE','LANALIS','EXPIRA','EXPDTE','CANTIDAD','CMFTXC','FACTOR DE EMPAQUE','CAJAS','CSALDO'];
@@ -1021,7 +1048,7 @@ async function guardarHistorico(){
   render(num($('cap').value));
 }
 
-$('bCalc').onclick=calcular;$('bPdf').onclick=()=>pdf();$('bXls').onclick=xls;$('bDet').onclick=detalle;$('bPla').onclick=plantilla;$('bHis').onclick=guardarHistorico;
+$('bCalc').onclick=calcular;$('bPdf').onclick=()=>pdf();$('bXls').onclick=xls;$('bDet').onclick=detalle;$('bEmp').onclick=resumenEmpaque;$('bPla').onclick=plantilla;$('bHis').onclick=guardarHistorico;
 function showTab(t){
   const reg=t==='regenerar';
   $('view-division').classList.toggle('hide',reg);
