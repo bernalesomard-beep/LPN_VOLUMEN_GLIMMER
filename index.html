@@ -295,13 +295,40 @@
           <p class="text-xs text-slate-400 mt-1 max-w-xl">
             Procesa el algoritmo de cubicaje para distribuir los ítems en cajas y bultos LPN, validando empaques completos y saldos.
           </p>
-          <div class="mt-3 flex flex-wrap gap-2" role="radiogroup" aria-label="Método de división">
-            <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800/70 text-xs font-semibold text-slate-200 cursor-pointer">
-              <input type="radio" name="metodo" value="volumen" checked class="accent-red-600"> Por volumen (cubicaje)
-            </label>
-            <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800/70 text-xs font-semibold text-slate-200 cursor-pointer">
-              <input type="radio" name="metodo" value="codlote" class="accent-red-600"> Por código y lote (caja master)
-            </label>
+          <div class="mt-3 space-y-2" role="radiogroup" aria-label="Criterio de división">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-400 w-20">Estándar</span>
+              <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800/70 text-xs font-semibold text-slate-200 cursor-pointer">
+                <input type="radio" name="metodo" value="volumen" checked class="accent-red-600"> Por volumen (cubicaje)
+              </label>
+              <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800/70 text-xs font-semibold text-slate-200 cursor-pointer">
+                <input type="radio" name="metodo" value="codlote" class="accent-red-600"> Por código y lote (caja master)
+              </label>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-400 w-20">Aruma</span>
+              <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800/70 text-xs font-semibold text-slate-200 cursor-pointer">
+                <input type="radio" name="metodo" value="aruma_vol" class="accent-red-600"> Aruma · Volumen
+              </label>
+              <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800/70 text-xs font-semibold text-slate-200 cursor-pointer">
+                <input type="radio" name="metodo" value="aruma_cl" class="accent-red-600"> Aruma · Código y lote
+              </label>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-400 w-20">Retail</span>
+              <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800/70 text-xs font-semibold text-slate-200 cursor-pointer">
+                <input type="radio" name="metodo" value="inretail" class="accent-red-600"> InRetail
+              </label>
+              <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800/70 text-xs font-semibold text-slate-200 cursor-pointer">
+                <input type="radio" name="metodo" value="saga" class="accent-red-600"> Saga
+              </label>
+            </div>
+            <div id="boxMaster" class="hide">
+              <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800/70 text-xs font-semibold text-slate-200 cursor-pointer">
+                <input type="checkbox" id="chkMaster" checked class="accent-red-600"> Cajas master completas: 1 LPN por cada caja master
+              </label>
+            </div>
+            <p id="metodoAyuda" class="text-xs text-slate-400 max-w-xl"></p>
           </div>
         </div>
 
@@ -446,7 +473,7 @@
             class="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-400 focus:bg-white text-slate-800">
         </div>
 
-        <div class="sm:col-span-3 flex gap-2">
+        <div class="sm:col-span-3 flex flex-wrap gap-2">
           <button id="bRegBuscar"
             class="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold bg-slate-800 hover:bg-slate-700 text-white transition-colors">
             <i data-lucide="search" class="w-3.5 h-3.5"></i>
@@ -456,6 +483,11 @@
             class="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold bg-brand-700 hover:bg-brand-600 text-white transition-colors disabled:opacity-40 disabled:pointer-events-none shadow-sm">
             <i data-lucide="download" class="w-3.5 h-3.5"></i>
             PDF
+          </button>
+          <button id="bRegXls" disabled
+            class="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+            <i data-lucide="sheet" class="w-3.5 h-3.5"></i>
+            Reporte XLS
           </button>
         </div>
       </div>
@@ -493,7 +525,7 @@ const APPS_URL='https://script.google.com/macros/s/AKfycbyJzvnXL6rh-V7pOMOgEJ7af
 const $=id=>document.getElementById(id);
 const esc=v=>String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 let VOL={}, PED=[], LPNS=[], ERR=[], COLS=[];
-let CFG={ok:false,ultimo:0}, PRIM=1, ULT=0, SAVED=false;
+let CFG={ok:false,ultimo:0}, PRIM=1, ULT=0, SAVED=false, PREUSO='';
 const norm=v=>String(v==null?'':v).trim().toUpperCase();
 const num=v=>{const n=parseFloat(String(v==null?'':v).replace(',','.'));return isNaN(n)?0:n};
 const MES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
@@ -566,19 +598,56 @@ $('fPed').onchange=async e=>{const f=e.target.files[0];if(!f)return;
     $('badgePedStatus').textContent="Inválido";
   }};
 
+// ---- Criterios por cliente y series de LPN ----
+const PREF={aruma_vol:'TA',aruma_cl:'TA',inretail:'IP',saga:'SF'};
+const AYUDA={
+  volumen:'Llena cada LPN hasta el volumen máximo. Prefijo y correlativo libres.',
+  codlote:'Por código y lote: 1 LPN por caja master completa y un LPN de saldo. Prefijo y correlativo libres.',
+  aruma_vol:'Aruma · por volumen. Serie TA000001.',
+  aruma_cl:'Aruma · por código y lote (caja master). Serie TA000001.',
+  inretail:'InRetail · por volumen. Un código con el mismo lote no se separa en cajas distintas, salvo cajas master. Serie IP000001.',
+  saga:'Saga · por volumen. Un código con lotes distintos no comparte caja. Serie SF000001.'
+};
+let LASTS={},PRE_LIBRE='',FIJO='';
+const modo=()=>(document.querySelector('input[name="metodo"]:checked')||{}).value||'volumen';
+function memSer(){try{return JSON.parse(localStorage.getItem('lpn_series')||'{}')}catch(e){return {}}}
+function ultSerie(p){const m=memSer()[p];return Math.max(Number(LASTS[p])||0,m?Number(m.ultimo)||0:0)}
+function aplicarModo(){
+  const m=modo(),p=PREF[m];
+  $('boxMaster').classList.toggle('hide',!(m==='inretail'||m==='saga'));
+  $('metodoAyuda').textContent=AYUDA[m]||'';
+  if(p){
+    if(!$('pre').disabled)PRE_LIBRE=$('pre').value;
+    $('pre').value=p;$('pre').disabled=true;
+    const u=ultSerie(p);$('ini').value=u+1;
+    $('stCfg').innerHTML='Serie <strong class="text-brand-700 font-bold">'+p+'</strong> · Último LPN: <strong class="text-slate-800 font-bold">'+p+String(u).padStart(6,'0')+'</strong> · Siguiente: <strong class="text-brand-700 font-bold">'+p+String(u+1).padStart(6,'0')+'</strong>';
+  }else{
+    const venia=$('pre').disabled;
+    if(venia){$('pre').value=PRE_LIBRE;$('pre').disabled=false}
+    if(CFG.ok){
+      $('ini').value=CFG.ultimo+1;
+      $('stCfg').innerHTML='Conectado al Sheet · Vol. Caja: <strong class="text-slate-800 font-bold">'+$('cap').value+'</strong> · Último LPN: <strong class="text-slate-800 font-bold">'+CFG.ultimo+'</strong> · Siguiente: <strong class="text-brand-700 font-bold">'+(CFG.ultimo+1)+'</strong>';
+    }else if(venia){$('ini').value=1}
+  }
+}
+document.querySelectorAll('input[name="metodo"]').forEach(x=>{x.onchange=aplicarModo});
+
 function refresh(){
   const canCalc = PED.length>0 && Object.keys(VOL).length>0;
   $('bCalc').disabled = !canCalc;
 }
 
 function calcular(){
-  const cap=num($('cap').value),pre=$('pre').value.trim(),E=1e-9;
-  const metodo=(document.querySelector('input[name="metodo"]:checked')||{}).value||'volumen';
+  const m0=modo(),fijo=PREF[m0]||'';
+  const cap=num($('cap').value),pre=fijo||$('pre').value.trim(),E=1e-9;
+  const metodo=(m0==='codlote'||m0==='aruma_cl')?'codlote':(m0==='inretail'||m0==='saga')?m0:'volumen';
   let ini=Math.max(1,parseInt($('ini').value)||1);
   LPNS=[];ERR=[];
-  if(CFG.ok&&ini<=CFG.ultimo){
-    ERR.push('El primer LPN se ajustó a '+(CFG.ultimo+1)+' porque el último LPN registrado fue '+CFG.ultimo+'.');
-    ini=CFG.ultimo+1;$('ini').value=ini;
+  FIJO=fijo;PREUSO=pre;
+  const refUlt=fijo?ultSerie(fijo):CFG.ultimo;
+  if((fijo||CFG.ok)&&ini<=refUlt){
+    ERR.push('El primer LPN se ajustó a '+(refUlt+1)+' porque el último LPN registrado'+(fijo?' de la serie '+fijo:'')+' fue '+refUlt+'.');
+    ini=refUlt+1;$('ini').value=ini;
   }
   let seq=ini;
   const orders=[];const idx={};
@@ -586,6 +655,84 @@ function calcular(){
   orders.forEach(o=>{
     const head=o.rows[0];let cur=null;
     const nuevo=()=>{cur={orden:o.k,head,lpn:pre+String(seq++).padStart(6,'0'),lines:[],vol:0};LPNS.push(cur)};
+    if(metodo==='inretail'||metodo==='saga'){
+      const masterOn=$('chkMaster').checked;
+      const loteDe=r=>norm(r['LOTE CLIENTE']!==undefined?r['LOTE CLIENTE']:r.ALOT);
+      const ub=r=>String(r.ALM==null?'':r.ALM)+'|'+String(r.UBIC==null?'':r.UBIC);
+      // 1) agrupar por código + lote
+      const gr={},go=[];
+      o.rows.forEach(r=>{const code=norm(r.PRODUCTO),lote=loteDe(r),k=code+'|'+lote;
+        if(!gr[k]){gr[k]={code,lote,rows:[]};go.push(gr[k])}gr[k].rows.push(r)});
+      const piezas=[];
+      go.forEach(g=>{
+        const uv=volDe(g.code);
+        if(uv===undefined){ERR.push('Orden '+o.k+': el código '+g.code+' no está en la maestra de volúmenes (omitido).');return}
+        if(!(uv>0)){ERR.push('Orden '+o.k+': el código '+g.code+' tiene volumen 0 en la maestra (omitido).');return}
+        const f=Math.max(1,num(g.rows[0]['FACTOR DE EMPAQUE'])||1);
+        const pend=g.rows.map((r,ix)=>({r,ix,left:num(r.CANTIDAD)})).sort((a,b)=>ub(a.r)<ub(b.r)?-1:ub(a.r)>ub(b.r)?1:a.ix-b.ix);
+        // 2) cajas master completas: 1 LPN por caja
+        if(masterOn&&f>1){
+          pend.forEach(p=>{const nb=Math.floor(p.left/f);
+            for(let b=0;b<nb;b++){nuevo();cur.tipo='MASTER';cur.lines.push({r:p.r,code:g.code,units:f,vol:f*uv,parte:f<num(p.r.CANTIDAD),cj:1,sd:0});cur.vol+=f*uv}
+            p.left-=nb*f});
+          const sobra=pend.reduce((s,p)=>s+p.left,0),nb2=Math.floor(sobra/f);let i=0;
+          for(let b=0;b<nb2;b++){
+            nuevo();cur.tipo='MASTER';let need=f,first=true;
+            while(need>0&&i<pend.length){
+              const p=pend[i],t=Math.min(need,p.left);
+              if(t>0){cur.lines.push({r:p.r,code:g.code,units:t,vol:t*uv,parte:t<num(p.r.CANTIDAD),cj:first?1:0,sd:0});cur.vol+=t*uv;first=false;p.left-=t;need-=t}
+              if(p.left<=0)i++;
+            }
+          }
+        }
+        const rest=pend.filter(p=>p.left>0);
+        if(rest.length)piezas.push({g,uv,f,rest});
+      });
+      // 3) lo que queda se reparte por volumen respetando la regla del cliente
+      cur=null;
+      const tomar=(rest,n)=>{const out=[];for(const p of rest){if(n<=0)break;const t=Math.min(n,p.left);if(t>0){out.push({r:p.r,units:t,parte:t<num(p.r.CANTIDAD)});p.left-=t;n-=t}}return out};
+      piezas.forEach(pz=>{
+        const {g,uv,f,rest}=pz,maxU=Math.floor((cap+E)/uv);
+        if(metodo==='inretail'){
+          // mismo código y lote juntos en un solo LPN; solo se corta si no cabe, en múltiplos de caja master
+          let total=rest.reduce((s,p)=>s+p.left,0);
+          if(total>maxU){
+            let ch=f>1?Math.floor(maxU/f)*f:maxU;
+            if(ch<=0){ERR.push('Orden '+o.k+': '+g.code+' (lote '+g.lote+') tiene factor de empaque ('+f+') mayor que un LPN; asignado por cajas master.');ch=Math.max(1,f)}
+            const prev=cur;
+            while(total>maxU){
+              const n=Math.min(ch,total);nuevo();
+              tomar(rest,n).forEach(t=>{cur.lines.push({r:t.r,code:g.code,units:t.units,vol:t.units*uv,parte:true});cur.vol+=t.units*uv});
+              total-=n;
+            }
+            cur=prev;
+          }
+          if(total>0){
+            const vt=total*uv;
+            if(!cur||cur.vol+vt>cap+E)nuevo();
+            tomar(rest,total).forEach(t=>{cur.lines.push({r:t.r,code:g.code,units:t.units,vol:t.units*uv,parte:t.parte});cur.vol+=t.units*uv});
+          }
+        }else{
+          // Saga: un código con lotes distintos no comparte LPN
+          rest.forEach(p=>{
+            let u=p.left,partido=false;const u0=p.left,orig=num(p.r.CANTIDAD);
+            const conflicto=()=>cur&&cur.lines.some(l=>l.code===g.code&&loteDe(l.r)!==g.lote);
+            while(u>0){
+              if(!cur||conflicto())nuevo();
+              const fit=Math.floor((cap-cur.vol+E)/uv);
+              if(fit>=u){cur.lines.push({r:p.r,code:g.code,units:u,vol:u*uv,parte:partido||u0<orig});cur.vol+=u*uv;u=0;break}
+              if(maxU>=u&&cur.lines.length){nuevo();continue}
+              let take=Math.floor(fit/f)*f;
+              if(take<=0){if(cur.lines.length){nuevo();continue}
+                take=Math.min(u,Math.max(f,1));ERR.push('Orden '+o.k+': '+g.code+' tiene factor de empaque ('+f+') mayor que un LPN; asignado por unidades.')}
+              take=Math.min(take,u);partido=true;
+              cur.lines.push({r:p.r,code:g.code,units:take,vol:take*uv,parte:true});cur.vol+=take*uv;u-=take;
+            }
+          });
+        }
+      });
+      return;
+    }
     if(metodo==='codlote'){
       // Agrupa por código + lote (suma todas las ubicaciones) y genera 1 LPN por caja master + 1 LPN de saldo
       const gr={},go=[];
@@ -950,7 +1097,7 @@ function reconstruir(header,rows){
 
 async function buscarReg(){
   const st=$('stReg'),campo=$('regCampo').value,d=$('regDesde').value.trim(),h=$('regHasta').value.trim()||d;
-  REGL=[];$('bRegPdf').disabled=true;$('regTabla').innerHTML='';
+  REGL=[];$('bRegPdf').disabled=true;$('bRegXls').disabled=true;$('regTabla').innerHTML='';
   if(!APPS_URL){st.innerHTML='<span class="text-rose-600">Falta conectar el Sheet (APPS_URL vacía).</span>';return}
   if(!d||isNaN(Number(d))||isNaN(Number(h))){st.innerHTML='<span class="text-rose-600">Escribe un número válido en Desde (y en Hasta si usas rango).</span>';return}
   st.innerHTML='<span class="text-indigo-600">Consultando base histórica de pedidos...</span>';
@@ -990,12 +1137,29 @@ async function buscarReg(){
           </tbody>
         </table>
       `;
-      $('bRegPdf').disabled=false;
+      $('bRegPdf').disabled=false;$('bRegXls').disabled=false;
     }
   }catch(x){st.innerHTML='<span class="text-rose-600 font-bold">Error de búsqueda: '+esc(x.message)+'</span>'}
   $('bRegBuscar').disabled=false;
 }
 $('bRegBuscar').onclick=buscarReg;
+// Reporte: pedido, documento, cliente, LPN, caja, código, descripción, EAN y cantidad, tomado del histórico
+function reporteHistorico(){
+  if(!REGL.length)return;
+  const T=v=>String(v==null?'':v).trim();
+  const tot={},cnt={};REGL.forEach(l=>{tot[l.orden]=(tot[l.orden]||0)+1});
+  const out=[];
+  REGL.forEach(l=>{
+    cnt[l.orden]=(cnt[l.orden]||0)+1;
+    l.lines.forEach(x=>{const r=x.r;out.push({
+      PEDIDO:T(r.PEDIDO),DOCUMENTO:T(l.orden),CLIENTE:T(r.CLIENTE),LPN:l.lpn,CAJA:(Number(r.CAJA)>0?Number(r.CAJA):cnt[l.orden]),TOTAL_CAJAS:(Number(r.TOTAL_CAJAS)>0?Number(r.TOTAL_CAJAS):tot[l.orden]),
+      CODIGO:T(x.code),DESCRIPCION:T(r.DESCRIPCION),EAN:T(r['COD.EAN']),CANTIDAD:x.units})});
+  });
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(out,{header:['PEDIDO','DOCUMENTO','CLIENTE','LPN','CAJA','TOTAL_CAJAS','CODIGO','DESCRIPCION','EAN','CANTIDAD']}),'REPORTE_LPN');
+  XLSX.writeFile(wb,'REPORTE_LPN_HISTORICO.xls',{bookType:'biff8'});
+}
+$('bRegXls').onclick=reporteHistorico;
 $('bRegPdf').onclick=()=>{if(REGL.length)pdf(REGL,'Picking_REGENERADO_')};
 
 async function cargarConfig(){
@@ -1005,6 +1169,7 @@ async function cargarConfig(){
     const d=await r.json();
     if(!d.ok)throw new Error(d.error||'respuesta inválida');
     CFG={ok:true,ultimo:Number(d.ultimoLpn)||0};
+    if(d.ultimos&&typeof d.ultimos==='object')LASTS=Object.assign({},d.ultimos);
     $('cap').value=d.volCaja;
     $('ini').value=CFG.ultimo+1;
     $('stCfg').innerHTML='Conectado al Sheet · Vol. Caja: <strong class="text-slate-800 font-bold">'+d.volCaja+'</strong> · Último LPN: <strong class="text-slate-800 font-bold">'+CFG.ultimo+'</strong> · Siguiente: <strong class="text-brand-700 font-bold">'+(CFG.ultimo+1)+'</strong>';
@@ -1016,6 +1181,7 @@ async function cargarConfig(){
     $('connLed').className="w-2 h-2 rounded-full bg-amber-500 ring-2 ring-amber-500/20";
     $('connLabel').textContent="Sin Apps Script";
   }
+  aplicarModo();
   if(LPNS.length)render(num($('cap').value));
 }
 
@@ -1028,19 +1194,29 @@ async function guardarHistorico(){
   LPNS.forEach(l=>l.lines.forEach(x=>{const r=x.r;
     rows.push([ts,T(l.orden),T(r.PEDIDO),l.lpn,x.code,T(r['LOTE CLIENTE']),T(r.EXPIRA),x.units,
       T(r.HCUST),T(r.CLIENTE),T(r.DIR).trim(),T(r.CODZON),T(r.UBIGEO),T(r.HSHIP),T(r.FECHA),T(r['FECHA CITA']),T(r.HORA),
-      T(r.ALM),T(r.UBIC),T(r.CHK),T(r.DESCRIPCION),T(r['COD.EAN']),num(r['FACTOR DE EMPAQUE'])||1])}));
+      T(r.ALM),T(r.UBIC),T(r.CHK),T(r.DESCRIPCION),T(r['COD.EAN']),num(r['FACTOR DE EMPAQUE'])||1,l.n,l.of])}));
   $('bHis').disabled=true;$('bHis').textContent='Guardando…';
   try{
-    const r=await fetch(APPS_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({rows,primerLpn:PRIM,ultimoLpn:ULT})});
+    const r=await fetch(APPS_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({rows,primerLpn:PRIM,ultimoLpn:ULT,prefijo:PREUSO,serie:!!FIJO})});
     const d=await r.json();
     if(!d.ok){
-      if(d.ultimoLpn!==undefined){CFG.ultimo=Number(d.ultimoLpn)||CFG.ultimo;$('ini').value=CFG.ultimo+1}
+      if(d.ultimos&&typeof d.ultimos==='object')Object.assign(LASTS,d.ultimos);
+      if(!FIJO&&d.ultimoLpn!==undefined){CFG.ultimo=Number(d.ultimoLpn)||CFG.ultimo;$('ini').value=CFG.ultimo+1}
       throw new Error(d.error||'error desconocido');
     }
-    CFG.ultimo=Number(d.ultimoLpn);SAVED=true;
-    $('ini').value=CFG.ultimo+1;
-    $('stCfg').innerHTML='<span class="text-emerald-700 font-bold">Guardado exitoso: '+d.guardadas+' filas en HISTORICO_LPN. Último LPN: '+CFG.ultimo+'</span>';
-    $('connLabel').textContent="LPN #"+CFG.ultimo+" Guardado";
+    SAVED=true;
+    if(FIJO){
+      const mem=memSer();mem[FIJO]={ultimo:ULT};
+      try{localStorage.setItem('lpn_series',JSON.stringify(mem))}catch(e){}
+      LASTS[FIJO]=ULT;$('ini').value=ULT+1;
+      $('stCfg').innerHTML='<span class="text-emerald-700 font-bold">Guardado exitoso: '+d.guardadas+' filas en HISTORICO_LPN. Último LPN: '+FIJO+String(ULT).padStart(6,'0')+'</span>';
+      $('connLabel').textContent="LPN "+FIJO+String(ULT).padStart(6,'0')+" Guardado";
+    }else{
+      CFG.ultimo=Number(d.ultimoLpn);
+      $('ini').value=CFG.ultimo+1;
+      $('stCfg').innerHTML='<span class="text-emerald-700 font-bold">Guardado exitoso: '+d.guardadas+' filas en HISTORICO_LPN. Último LPN: '+CFG.ultimo+'</span>';
+      $('connLabel').textContent="LPN #"+CFG.ultimo+" Guardado";
+    }
   }catch(x){
     $('stCfg').innerHTML='<span class="text-rose-600 font-bold">Error al guardar: '+esc(x.message)+'</span>';
     alert('No se guardó en el histórico:\n'+x.message);
@@ -1065,6 +1241,7 @@ $('tabDivision').onclick=()=>showTab('division');
 $('tabRegenerar').onclick=()=>showTab('regenerar');
 $('lnkHist').onclick=e=>{e.preventDefault();showTab('regenerar')};$('bPlaVacia').onclick=plantillaVacia;
 refresh();
+aplicarModo();
 cargarSheet();
 cargarConfig();
 
