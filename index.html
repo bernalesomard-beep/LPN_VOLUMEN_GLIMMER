@@ -142,6 +142,10 @@
         class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-t-lg border border-b-0 border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100 -mb-px">
         <i data-lucide="archive-restore" class="w-4 h-4"></i> Reimpresión desde histórico
       </button>
+      <button id="tabEtiquetas" type="button" role="tab" aria-selected="false"
+        class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-t-lg border border-b-0 border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100 -mb-px">
+        <i data-lucide="tag" class="w-4 h-4"></i> Impresión de LPN
+      </button>
     </nav>
 
     <div id="view-division" class="space-y-8">
@@ -557,6 +561,103 @@
 
       <!-- Regenerated Results Table -->
       <div class="table-container overflow-x-auto rounded-lg border border-slate-200 shadow-sm" id="regTabla"></div>
+    </section>
+    </div>
+
+
+    <div id="view-etiquetas" class="hide">
+    <section class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center shrink-0"><i data-lucide="tag" class="w-5 h-5"></i></div>
+          <div>
+            <h3 class="text-base font-bold text-slate-900 tracking-tight">Impresión de etiquetas LPN</h3>
+            <p class="text-xs text-slate-500 mt-0.5">Etiqueta de 104 × 64 mm con código de barras Code 128, una por LPN, tomada del histórico. Sirve para uno o varios pedidos.</p>
+          </div>
+        </div>
+        <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono bg-slate-100 text-slate-600 border border-slate-200 self-start sm:self-auto"><span>104 × 64 mm · Code 128</span></div>
+      </div>
+
+      <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
+        <!-- Búsqueda y lista de LPN -->
+        <div class="xl:col-span-8 space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-12 gap-3.5 items-end">
+            <div class="sm:col-span-3">
+              <label for="etqCampo" class="block text-xs font-semibold text-slate-700 mb-1">Criterio de Búsqueda</label>
+              <select id="etqCampo" class="w-full px-3 py-2 text-xs font-medium bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-400 focus:bg-white text-slate-800">
+                <option value="PEDIDO">N° de Pedido</option>
+                <option value="ORDEN">N° de Orden</option>
+              </select>
+            </div>
+            <div class="sm:col-span-3">
+              <label for="etqDesde" class="block text-xs font-semibold text-slate-700 mb-1">Desde (Valor inicial)</label>
+              <input type="text" id="etqDesde" inputmode="numeric" placeholder="Ej. 1000443350" class="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-400 focus:bg-white text-slate-800">
+            </div>
+            <div class="sm:col-span-3">
+              <label for="etqHasta" class="block text-xs font-semibold text-slate-700 mb-1">Hasta (Opcional si es rango)</label>
+              <input type="text" id="etqHasta" inputmode="numeric" placeholder="Igual a 'Desde' si es único" class="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-400 focus:bg-white text-slate-800">
+            </div>
+            <div class="sm:col-span-3">
+              <button id="bEtqBuscar" type="button" class="w-full inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold bg-slate-800 hover:bg-slate-700 text-white transition-colors">
+                <i data-lucide="search" class="w-3.5 h-3.5"></i> Buscar
+              </button>
+            </div>
+          </div>
+          <div id="stEtq" class="text-xs text-slate-500 font-mono bg-slate-50 px-3 py-2 rounded-lg border border-slate-200">Introduce el número de pedido u orden y pulsa Buscar.</div>
+          <div class="table-container overflow-auto rounded-lg border border-slate-200 shadow-sm max-h-[30rem]" id="etqTabla"></div>
+        </div>
+
+        <!-- Logo, opciones y salida -->
+        <div class="xl:col-span-4 space-y-4">
+          <div class="rounded-xl border border-slate-200 p-4 space-y-3">
+            <div class="text-xs font-bold uppercase tracking-wider text-slate-500">Logo / marca (esquina inferior izquierda)</div>
+            <div class="flex items-center gap-3">
+              <div class="w-40 h-16 rounded-lg border border-dashed border-slate-300 bg-slate-50 flex items-center justify-center overflow-hidden">
+                <img id="etqLogoImg" alt="Logo" class="hide max-w-full max-h-full object-contain">
+                <span id="etqLogoVacio" class="text-xs text-slate-400">Sin logo</span>
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <label class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 cursor-pointer">
+                  <i data-lucide="upload" class="w-3.5 h-3.5"></i> Subir logo
+                  <input type="file" id="etqLogoFile" accept="image/png,image/jpeg,image/webp,image/svg+xml" class="hide">
+                </label>
+                <button id="bEtqLogoQuitar" type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-500 hover:text-rose-700 hover:bg-rose-50 border border-transparent">Quitar logo</button>
+              </div>
+            </div>
+            <div>
+              <label for="etqMarca" class="block text-xs font-semibold text-slate-700 mb-1">Texto de marca (se usa si no hay logo)</label>
+              <input type="text" id="etqMarca" value="SHEGLAM" class="w-full px-3 py-2 text-xs font-bold bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-400 focus:bg-white text-slate-800">
+            </div>
+            <p class="text-xs text-slate-500">El logo se guarda en este navegador; no hace falta volver a subirlo.</p>
+          </div>
+
+          <div class="rounded-xl border border-slate-200 p-4 space-y-3">
+            <div class="text-xs font-bold uppercase tracking-wider text-slate-500">Opciones</div>
+            <div>
+              <label for="etqMod" class="block text-xs font-semibold text-slate-700 mb-1">Grosor de la barra más fina</label>
+              <select id="etqMod" class="w-full px-3 py-2 text-xs font-medium bg-slate-50 border border-slate-200 rounded-lg text-slate-800">
+                <option value="0.375">0.375 mm (3 puntos a 203 dpi)</option>
+                <option value="0.5" selected>0.500 mm (4 puntos a 203 dpi)</option>
+                <option value="0.625">0.625 mm (5 puntos a 203 dpi)</option>
+              </select>
+            </div>
+            <label class="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer">
+              <input type="checkbox" id="etqSinSA" checked class="accent-red-600"> Quitar «S.A.», «S.A.C.», «S.R.L.» del nombre del cliente
+            </label>
+          </div>
+
+          <div class="flex flex-wrap gap-2">
+            <button id="bEtqPrev" type="button" disabled class="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg text-xs font-bold bg-slate-800 hover:bg-slate-700 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+              <i data-lucide="eye" class="w-3.5 h-3.5"></i> Vista previa
+            </button>
+            <button id="bEtqPdf" type="button" disabled class="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg text-xs font-bold bg-brand-700 hover:bg-brand-600 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+              <i data-lucide="printer" class="w-3.5 h-3.5"></i> <span id="etqPdfTxt">Etiquetas PDF</span>
+            </button>
+          </div>
+          <p class="text-xs text-slate-500">Al imprimir, abre el PDF en tamaño real (100 %), sin «ajustar a la página», para que las barras conserven su grosor.</p>
+          <iframe id="etqPrev" title="Vista previa de la etiqueta" class="hide w-full h-72 rounded-lg border border-slate-200 bg-slate-50"></iframe>
+        </div>
+      </div>
     </section>
     </div>
 
@@ -1220,6 +1321,182 @@ function reporteHistorico(){
 $('bRegXls').onclick=reporteHistorico;
 $('bRegPdf').onclick=()=>{if(REGL.length)pdf(REGL,'Picking_REGENERADO_')};
 
+
+// ================== IMPRESIÓN DE ETIQUETAS LPN (104 x 64 mm, Code 128) ==================
+const C128P=['212222','222122','222221','121223','121322','131222','122213','122312','132212','221213','221312','231212','112232','122132','122231','113222','123122','123221','223211','221132','221231','213212','223112','312131','311222','321122','321221','312212','322112','322211','212123','212321','232121','111323','131123','131321','112313','132113','132311','211313','231113','231311','112133','112331','132131','113123','113321','133121','313121','211331','231131','213113','213311','213131','311123','311321','331121','312113','312311','332111','314111','221411','431111','111224','111422','121124','121421','141122','141221','112214','112412','122114','122411','142112','142211','241211','221114','413111','241112','134111','111242','121142','121241','114212','124112','124211','411212','421112','421211','212141','214121','412121','111143','111341','131141','114113','114311','411113','411311','113141','114131','311141','411131','211412','211214','211232','2331112'];
+// Devuelve los anchos (en módulos) alternando barra/espacio, empezando por barra. Subconjuntos B y C con cambio automático.
+function code128(txt){
+  txt=String(txt).replace(/[^\x20-\x7e]/g,'-');
+  const v=[];let mode='',i=0;
+  const run=k=>{let n=0;while(k+n<txt.length&&txt.charCodeAt(k+n)>=48&&txt.charCodeAt(k+n)<=57)n++;return n};
+  while(i<txt.length){
+    const r=run(i);
+    if(r>=4){
+      let n=r;
+      if(mode!=='C'){
+        if(r%2===1){if(mode===''){v.push(104);mode='B'}v.push(txt.charCodeAt(i)-32);i++;n--}
+        v.push(mode===''?105:99);mode='C';
+      }
+      for(let k=0;k<n;k+=2)v.push(parseInt(txt.substr(i+k,2),10));
+      i+=n;
+    }else{
+      if(mode==='')v.push(104);else if(mode==='C')v.push(100);
+      mode='B';v.push(txt.charCodeAt(i)-32);i++;
+    }
+  }
+  let sum=v[0];for(let k=1;k<v.length;k++)sum+=v[k]*k;
+  v.push(sum%103);v.push(106);
+  return v.map(c=>C128P[c]).join('').split('').map(Number);
+}
+
+let ETQL=[],LOGO=null;
+try{LOGO=JSON.parse(localStorage.getItem('lpn_logo')||'null')}catch(e){}
+try{const m=localStorage.getItem('lpn_marca');if(m!==null)$('etqMarca').value=m}catch(e){}
+
+function pintarLogo(){
+  const ok=!!(LOGO&&LOGO.data);
+  $('etqLogoImg').classList.toggle('hide',!ok);$('etqLogoVacio').classList.toggle('hide',ok);
+  if(ok)$('etqLogoImg').src=LOGO.data;
+}
+$('etqLogoFile').onchange=e=>{
+  const f=e.target.files[0];if(!f)return;
+  const rd=new FileReader();
+  rd.onload=ev=>{
+    const im=new Image();
+    im.onload=()=>{
+      const k=Math.min(1,700/im.width),cv=document.createElement('canvas');
+      cv.width=Math.max(1,Math.round(im.width*k));cv.height=Math.max(1,Math.round(im.height*k));
+      const cx=cv.getContext('2d');cx.fillStyle='#fff';cx.fillRect(0,0,cv.width,cv.height);cx.drawImage(im,0,0,cv.width,cv.height);
+      LOGO={data:cv.toDataURL('image/png'),w:cv.width,h:cv.height};
+      try{localStorage.setItem('lpn_logo',JSON.stringify(LOGO))}catch(x){}
+      pintarLogo();e.target.value='';
+    };
+    im.onerror=()=>alert('No se pudo leer la imagen del logo.');
+    im.src=ev.target.result;
+  };
+  rd.readAsDataURL(f);
+};
+$('bEtqLogoQuitar').onclick=()=>{LOGO=null;try{localStorage.removeItem('lpn_logo')}catch(e){}pintarLogo()};
+$('etqMarca').oninput=()=>{try{localStorage.setItem('lpn_marca',$('etqMarca').value)}catch(e){}};
+pintarLogo();
+
+function dibujarEtiqueta(doc,l,o){
+  const W=104,H=64,mx=4,h=l.head;
+  let cli=String(h.CLIENTE==null?'':h.CLIENTE).trim().replace(/\s+/g,' ');
+  if(o.sinSA)cli=cli.replace(/[\s,]+(S\.?\s?A\.?\s?C\.?|S\.?\s?A\.?|S\.?\s?R\.?\s?L\.?|E\.?\s?I\.?\s?R\.?\s?L\.?)\s*$/i,'').trim();
+  const und=l.lines.reduce((a,x)=>a+x.units,0);
+  const undTxt=Number.isInteger(und)?String(und):String(+und.toFixed(2));
+  doc.setTextColor(0);doc.setFillColor(0);
+  // filas de datos: rótulo + valor que se reduce solo si no cabe
+  const fila=(y,rot,val,fmax)=>{
+    doc.setFont('helvetica','bold');doc.setFontSize(15);doc.text(rot,mx,y);
+    const x=mx+doc.getTextWidth(rot)+2,disp=W-mx-x;let fs=fmax;
+    doc.setFontSize(fs);while(fs>7&&doc.getTextWidth(val)>disp){fs-=0.5;doc.setFontSize(fs)}
+    doc.text(val,x,y);
+  };
+  // CLIENTE: una línea si cabe con letra de al menos 12 pt; si no, pasa a dos líneas
+  const ajusta=(t,maxW)=>{const ps=t.split(' '),ls=[];let cur='';ps.forEach(p=>{const c=cur?cur+' '+p:p;if(cur&&doc.getTextWidth(c)>maxW){ls.push(cur);cur=p}else cur=c});if(cur)ls.push(cur);return ls};
+  (()=>{
+    const rot='CLIENTE:';
+    doc.setFont('helvetica','bold');doc.setFontSize(15);
+    const x=mx+doc.getTextWidth(rot)+2,disp=W-mx-x;
+    let fs=19;doc.setFontSize(fs);
+    while(fs>12&&doc.getTextWidth(cli)>disp){fs-=0.5;doc.setFontSize(fs)}
+    if(doc.getTextWidth(cli)<=disp){doc.setFontSize(15);doc.text(rot,mx,14);doc.setFontSize(fs);doc.text(cli,x,14);return}
+    let f2=14,ls=[];
+    for(;f2>=8;f2-=0.5){doc.setFontSize(f2);ls=ajusta(cli,disp);if(ls.length<=2)break}
+    doc.setFontSize(15);doc.text(rot,mx,9.5);doc.setFontSize(f2);
+    ls.slice(0,2).forEach((t,i)=>doc.text(t,x,9.5+i*5));
+  })();
+  fila(21.5,'BPCS:',String(h.ORDEN),21);
+  fila(29,'DOCUMENTO:',String(h.PEDIDO),21);
+  // código de barras Code 128 centrado
+  const bars=code128(l.lpn),mods=bars.reduce((a,b)=>a+b,0);
+  const mod=Math.min(o.mod,(W-2*mx-2)/mods);   // el ancho de módulo nunca baja de lo pedido salvo que no quepa
+  const bw=mods*mod;let x=(W-bw)/2;
+  bars.forEach((a,i)=>{if(i%2===0)doc.rect(x,33.5,a*mod,11.5,'F');x+=a*mod});
+  doc.setFont('helvetica','bold');doc.setFontSize(20);doc.text(String(l.lpn),W/2,52,{align:'center'});
+  // esquina inferior izquierda: logo o texto de marca
+  if(LOGO&&LOGO.data){
+    const bwx=40,bhx=9,k=Math.min(bwx/LOGO.w,bhx/LOGO.h),iw=LOGO.w*k,ih=LOGO.h*k;
+    doc.addImage(LOGO.data,'PNG',mx,61.5-ih,iw,ih,'logo','FAST');
+  }else{
+    const t=($('etqMarca').value||'').trim();
+    if(t){doc.setFont('helvetica','bold');let fs=20;doc.setFontSize(fs);while(fs>8&&doc.getTextWidth(t)>46){fs-=0.5;doc.setFontSize(fs)}doc.text(t,mx,61)}
+  }
+  // unidades, abajo a la derecha
+  doc.setFont('helvetica','bold');doc.setFontSize(15);
+  const uw=doc.getTextWidth('UND');doc.text('UND',W-mx,61,{align:'right'});
+  doc.setFontSize(28);doc.text(undTxt,W-mx-uw-2,61,{align:'right'});
+}
+function etiquetasDoc(L){
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'landscape',unit:'mm',format:[104,64]});
+  const o={mod:parseFloat($('etqMod').value)||0.5,sinSA:$('etqSinSA').checked};
+  L.forEach((l,i)=>{if(i>0)doc.addPage([104,64],'landscape');dibujarEtiqueta(doc,l,o)});
+  return doc;
+}
+function etqSel(){return ETQL.filter((l,i)=>{const c=document.querySelector('input[data-etq="'+i+'"]');return c?c.checked:true})}
+function etqCuenta(){
+  const n=etqSel().length;
+  $('etqPdfTxt').textContent='Etiquetas PDF ('+n+')';
+  $('bEtqPdf').disabled=$('bEtqPrev').disabled=!n;
+  const ta=$('etqTodos');if(ta)ta.checked=n===ETQL.length;
+}
+async function buscarEtq(){
+  const st=$('stEtq'),campo=$('etqCampo').value,d=$('etqDesde').value.trim(),h=$('etqHasta').value.trim()||d;
+  ETQL=[];$('etqTabla').innerHTML='';etqCuenta();$('etqPrev').classList.add('hide');
+  if(!APPS_URL){st.innerHTML='<span class="text-rose-600">Falta conectar el Sheet (APPS_URL vacía).</span>';return}
+  if(!d||isNaN(Number(d))||isNaN(Number(h))){st.innerHTML='<span class="text-rose-600">Escribe un número válido en Desde (y en Hasta si usas rango).</span>';return}
+  st.innerHTML='<span class="text-indigo-600">Consultando base histórica de pedidos...</span>';
+  $('bEtqBuscar').disabled=true;
+  try{
+    const q='?action=historico&campo='+encodeURIComponent(campo)+'&desde='+encodeURIComponent(d)+'&hasta='+encodeURIComponent(h)+'&t='+Date.now();
+    const res=await fetch(APPS_URL+q,{cache:'no-store'}),j=await res.json();
+    if(!j.ok)throw new Error(j.error||'respuesta inválida');
+    if(!j.rows.length){st.innerHTML='<span class="text-amber-600 font-semibold">No se encontraron pedidos en ese rango.</span>'}
+    else{
+      ETQL=reconstruir(j.header,j.rows);
+      const ords=new Set(ETQL.map(l=>l.orden));
+      st.innerHTML='<span class="text-emerald-700 font-bold">'+ETQL.length+' LPN encontrados</span> · '+ords.size+' orden(es). Desmarca los que no quieras imprimir.';
+      const MAX=1000;
+      $('etqTabla').innerHTML=`
+        <table class="w-full text-left text-xs border-collapse">
+          <thead class="sticky top-0"><tr class="bg-slate-100 text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+            <th class="py-2.5 px-4 w-10"><input type="checkbox" id="etqTodos" checked class="accent-red-600"></th>
+            <th class="py-2.5 px-4">LPN</th><th class="py-2.5 px-4">BPCS (Orden)</th><th class="py-2.5 px-4">Documento (Pedido)</th><th class="py-2.5 px-4">Cliente</th><th class="py-2.5 px-4 text-right">Unidades</th>
+          </tr></thead>
+          <tbody class="divide-y divide-slate-100">
+          ${ETQL.slice(0,MAX).map((l,i)=>`
+            <tr class="hover:bg-slate-50 transition-colors">
+              <td class="py-2 px-4"><input type="checkbox" data-etq="${i}" checked class="accent-red-600"></td>
+              <td class="py-2 px-4 font-mono font-bold text-slate-900">${esc(l.lpn)}</td>
+              <td class="py-2 px-4 font-mono text-slate-700">${esc(l.head.ORDEN)}</td>
+              <td class="py-2 px-4 font-mono text-slate-700">${esc(l.head.PEDIDO)}</td>
+              <td class="py-2 px-4 text-slate-600">${esc(l.head.CLIENTE)}</td>
+              <td class="py-2 px-4 text-right font-mono font-semibold text-slate-800">${l.lines.reduce((a,x)=>a+x.units,0)}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>${ETQL.length>MAX?'<div class="p-3 text-xs text-amber-700 bg-amber-50">Se muestran los primeros '+MAX+' LPN; el PDF incluye todos los marcados.</div>':''}`;
+      $('etqTodos').onchange=ev=>{document.querySelectorAll('input[data-etq]').forEach(c=>{c.checked=ev.target.checked});etqCuenta()};
+      $('etqTabla').onchange=ev=>{if(ev.target.dataset&&ev.target.dataset.etq!==undefined)etqCuenta()};
+    }
+  }catch(x){st.innerHTML='<span class="text-rose-600 font-bold">Error de búsqueda: '+esc(x.message)+'</span>'}
+  $('bEtqBuscar').disabled=false;etqCuenta();
+  if(window.lucide)lucide.createIcons();
+}
+$('bEtqBuscar').onclick=buscarEtq;
+$('bEtqPdf').onclick=()=>{
+  const L=etqSel();if(!L.length)return;
+  const ords=new Set(L.map(l=>l.orden));
+  etiquetasDoc(L).save('ETIQUETAS_LPN_'+L[0].orden+(ords.size>1?'_y_otros':'')+'.pdf');
+};
+$('bEtqPrev').onclick=()=>{
+  const L=etqSel();if(!L.length)return;
+  const doc=etiquetasDoc([L[0]]),fr=$('etqPrev');
+  fr.classList.remove('hide');fr.src=doc.output('bloburl');
+};
+
 async function cargarConfig(){
   if(!APPS_URL){return}
   try{
@@ -1284,17 +1561,18 @@ async function guardarHistorico(){
 
 $('bCalc').onclick=calcular;$('bPdf').onclick=()=>pdf();$('bXls').onclick=xls;$('bDet').onclick=detalle;$('bEmp').onclick=resumenEmpaque;$('bPla').onclick=plantilla;$('bHis').onclick=guardarHistorico;
 function showTab(t){
-  const reg=t==='regenerar';
-  $('view-division').classList.toggle('hide',reg);
-  $('view-regenerar').classList.toggle('hide',!reg);
+  const V={division:'view-division',regenerar:'view-regenerar',etiquetas:'view-etiquetas'};
+  Object.keys(V).forEach(k=>$(V[k]).classList.toggle('hide',k!==t));
   const on='border-slate-200 bg-white text-slate-900',off='border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100';
-  [['tabDivision',!reg],['tabRegenerar',reg]].forEach(([id,act])=>{
-    const b=$(id);b.setAttribute('aria-selected',act);
+  [['tabDivision','division'],['tabRegenerar','regenerar'],['tabEtiquetas','etiquetas']].forEach(([id,k])=>{
+    const act=k===t,b=$(id);b.setAttribute('aria-selected',act);
     b.className='inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-t-lg border border-b-0 -mb-px '+(act?on:off);
   });
   if(window.lucide)lucide.createIcons();
-  if(reg)$('regDesde').focus();
+  if(t==='regenerar')$('regDesde').focus();
+  if(t==='etiquetas')$('etqDesde').focus();
 }
+$('tabEtiquetas').onclick=()=>showTab('etiquetas');
 $('tabDivision').onclick=()=>showTab('division');
 $('tabRegenerar').onclick=()=>showTab('regenerar');
 $('lnkHist').onclick=e=>{e.preventDefault();showTab('regenerar')};$('bPlaVacia').onclick=plantillaVacia;
