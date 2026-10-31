@@ -133,7 +133,7 @@
   <main class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 space-y-8 w-full">
 
     <!-- PESTAÑAS -->
-    <nav class="flex gap-2 border-b border-slate-200" role="tablist" aria-label="Secciones">
+    <nav class="flex gap-2 border-b border-slate-200 overflow-x-auto whitespace-nowrap" role="tablist" aria-label="Secciones">
       <button id="tabDivision" type="button" role="tab" aria-selected="true"
         class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-t-lg border border-b-0 border-slate-200 bg-white text-slate-900 -mb-px">
         <i data-lucide="layers" class="w-4 h-4"></i> División de pedido
@@ -145,6 +145,14 @@
       <button id="tabEtiquetas" type="button" role="tab" aria-selected="false"
         class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-t-lg border border-b-0 border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100 -mb-px">
         <i data-lucide="tag" class="w-4 h-4"></i> Impresión de LPN
+      </button>
+      <button id="tabDetalle" type="button" role="tab" aria-selected="false"
+        class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-t-lg border border-b-0 border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100 -mb-px">
+        <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Detalle de pedido
+      </button>
+      <button id="tabEmpaque" type="button" role="tab" aria-selected="false"
+        class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-t-lg border border-b-0 border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100 -mb-px">
+        <i data-lucide="package-check" class="w-4 h-4"></i> Resumen de empaque
       </button>
     </nav>
 
@@ -535,23 +543,29 @@
             class="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-400 focus:bg-white text-slate-800">
         </div>
 
-        <div class="sm:col-span-3 flex flex-wrap gap-2">
+        <div class="sm:col-span-3">
           <button id="bRegBuscar"
-            class="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold bg-slate-800 hover:bg-slate-700 text-white transition-colors">
+            class="w-full inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold bg-slate-800 hover:bg-slate-700 text-white transition-colors">
             <i data-lucide="search" class="w-3.5 h-3.5"></i>
             Buscar
           </button>
-          <button id="bRegPdf" disabled
-            class="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold bg-brand-700 hover:bg-brand-600 text-white transition-colors disabled:opacity-40 disabled:pointer-events-none shadow-sm">
-            <i data-lucide="download" class="w-3.5 h-3.5"></i>
-            PDF
-          </button>
-          <button id="bRegXls" disabled
-            class="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-            <i data-lucide="sheet" class="w-3.5 h-3.5"></i>
-            Reporte XLS
-          </button>
         </div>
+      </div>
+
+      <!-- Acciones -->
+      <div class="flex flex-wrap gap-2">
+        <button id="bRegPrev" disabled
+          class="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-lg text-xs font-bold bg-slate-800 hover:bg-slate-700 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+          <i data-lucide="eye" class="w-3.5 h-3.5"></i> Vista previa
+        </button>
+        <button id="bRegPdf" disabled
+          class="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-lg text-xs font-bold bg-brand-700 hover:bg-brand-600 text-white transition-colors disabled:opacity-40 disabled:pointer-events-none shadow-sm">
+          <i data-lucide="download" class="w-3.5 h-3.5"></i> PDF
+        </button>
+        <button id="bRegXls" disabled
+          class="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+          <i data-lucide="sheet" class="w-3.5 h-3.5"></i> Reporte XLS
+        </button>
       </div>
 
       <!-- Status Indicator -->
@@ -560,7 +574,16 @@
       </div>
 
       <!-- Regenerated Results Table -->
-      <div class="table-container overflow-x-auto rounded-lg border border-slate-200 shadow-sm" id="regTabla"></div>
+      <div id="regGrid" class="grid grid-cols-1 gap-5 items-start">
+        <div class="table-container overflow-auto rounded-lg border border-slate-200 shadow-sm max-h-[22rem]" id="regTabla"></div>
+        <div id="regPrevBox" class="hide space-y-2">
+          <div class="flex items-center justify-between">
+            <span id="regPrevTit" class="text-xs font-bold text-slate-600">Vista previa</span>
+            <button id="bRegPrevCerrar" type="button" class="text-xs font-semibold text-slate-500 hover:text-rose-700 px-2 py-1 rounded hover:bg-rose-50">Cerrar</button>
+          </div>
+          <iframe id="regPrev" title="Vista previa del picking" class="w-full h-[34rem] rounded-lg border border-slate-200 bg-slate-50"></iframe>
+        </div>
+      </div>
     </section>
     </div>
 
@@ -604,7 +627,7 @@
             </div>
           </div>
           <div id="stEtq" class="text-xs text-slate-500 font-mono bg-slate-50 px-3 py-2 rounded-lg border border-slate-200">Introduce el número de pedido u orden y pulsa Buscar.</div>
-          <div class="table-container overflow-auto rounded-lg border border-slate-200 shadow-sm max-h-[30rem]" id="etqTabla"></div>
+          <div class="table-container overflow-auto rounded-lg border border-slate-200 shadow-sm max-h-[22rem]" id="etqTabla"></div>
         </div>
 
         <!-- Logo, opciones y salida -->
@@ -658,6 +681,103 @@
           <iframe id="etqPrev" title="Vista previa de la etiqueta" class="hide w-full h-72 rounded-lg border border-slate-200 bg-slate-50"></iframe>
         </div>
       </div>
+    </section>
+    </div>
+
+
+    <div id="view-det" class="hide">
+    <section class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-5">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center shrink-0"><i data-lucide="file-spreadsheet" class="w-5 h-5"></i></div>
+          <div>
+            <h3 class="text-base font-bold text-slate-900 tracking-tight">Detalle de pedido</h3>
+            <p class="text-xs text-slate-500 mt-0.5">Detalle por LPN tomado del histórico: pedido, documento, cliente, LPN, caja, código, descripción, EAN y cantidad. Filtra y descarga en Excel.</p>
+          </div>
+        </div>
+        <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono bg-slate-100 text-slate-600 border border-slate-200 self-start sm:self-auto"><span>Desde histórico · XLS</span></div>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-12 gap-3.5 items-end">
+        <div class="sm:col-span-2">
+          <label for="detCampo" class="block text-xs font-semibold text-slate-700 mb-1">Criterio de Búsqueda</label>
+          <select id="detCampo" class="w-full px-3 py-2 text-xs font-medium bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-400 focus:bg-white text-slate-800">
+            <option value="PEDIDO">N° de Pedido</option>
+            <option value="ORDEN">N° de Orden</option>
+          </select>
+        </div>
+        <div class="sm:col-span-3">
+          <label for="detDesde" class="block text-xs font-semibold text-slate-700 mb-1">Desde (Valor inicial)</label>
+          <input type="text" id="detDesde" inputmode="numeric" placeholder="Ej. 71215" class="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-400 focus:bg-white text-slate-800">
+        </div>
+        <div class="sm:col-span-3">
+          <label for="detHasta" class="block text-xs font-semibold text-slate-700 mb-1">Hasta (Opcional si es rango)</label>
+          <input type="text" id="detHasta" inputmode="numeric" placeholder="Igual a 'Desde' si es único" class="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-400 focus:bg-white text-slate-800">
+        </div>
+        <div class="sm:col-span-4">
+          <label for="detCli" class="block text-xs font-semibold text-slate-700 mb-1">Cliente (filtra el resultado)</label>
+          <select id="detCli" class="w-full px-3 py-2 text-xs font-medium bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-400 focus:bg-white text-slate-800">
+            <option value="">Todos los clientes</option>
+          </select>
+        </div>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button id="detBuscar" type="button" class="inline-flex items-center justify-center gap-1.5 px-6 py-2.5 rounded-lg text-xs font-bold bg-slate-800 hover:bg-slate-700 text-white transition-colors">
+          <i data-lucide="search" class="w-3.5 h-3.5"></i> Buscar
+        </button>
+        <button id="detXls" type="button" disabled class="inline-flex items-center justify-center gap-1.5 px-6 py-2.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+          <i data-lucide="sheet" class="w-3.5 h-3.5"></i> Descargar XLS
+        </button>
+      </div>
+      <div id="detSt" class="text-xs text-slate-500 font-mono bg-slate-50 px-3 py-2 rounded-lg border border-slate-200">Introduce el número de pedido u orden y pulsa Buscar.</div>
+      <div class="table-container overflow-auto rounded-lg border border-slate-200 shadow-sm max-h-[22rem]" id="detTabla"></div>
+    </section>
+    </div>
+
+    <div id="view-emp" class="hide">
+    <section class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-5">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center shrink-0"><i data-lucide="package-check" class="w-5 h-5"></i></div>
+          <div>
+            <h3 class="text-base font-bold text-slate-900 tracking-tight">Resumen de empaque</h3>
+            <p class="text-xs text-slate-500 mt-0.5">Resumen por pedido, código y lote: cajas master (cantidad de LPN) y saldo, tomado del histórico. Filtra y descarga en Excel.</p>
+          </div>
+        </div>
+        <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono bg-slate-100 text-slate-600 border border-slate-200 self-start sm:self-auto"><span>Desde histórico · XLS</span></div>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-12 gap-3.5 items-end">
+        <div class="sm:col-span-2">
+          <label for="empCampo" class="block text-xs font-semibold text-slate-700 mb-1">Criterio de Búsqueda</label>
+          <select id="empCampo" class="w-full px-3 py-2 text-xs font-medium bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-400 focus:bg-white text-slate-800">
+            <option value="PEDIDO">N° de Pedido</option>
+            <option value="ORDEN">N° de Orden</option>
+          </select>
+        </div>
+        <div class="sm:col-span-3">
+          <label for="empDesde" class="block text-xs font-semibold text-slate-700 mb-1">Desde (Valor inicial)</label>
+          <input type="text" id="empDesde" inputmode="numeric" placeholder="Ej. 71215" class="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-400 focus:bg-white text-slate-800">
+        </div>
+        <div class="sm:col-span-3">
+          <label for="empHasta" class="block text-xs font-semibold text-slate-700 mb-1">Hasta (Opcional si es rango)</label>
+          <input type="text" id="empHasta" inputmode="numeric" placeholder="Igual a 'Desde' si es único" class="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-400 focus:bg-white text-slate-800">
+        </div>
+        <div class="sm:col-span-4">
+          <label for="empCli" class="block text-xs font-semibold text-slate-700 mb-1">Cliente (filtra el resultado)</label>
+          <select id="empCli" class="w-full px-3 py-2 text-xs font-medium bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-400 focus:bg-white text-slate-800">
+            <option value="">Todos los clientes</option>
+          </select>
+        </div>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button id="empBuscar" type="button" class="inline-flex items-center justify-center gap-1.5 px-6 py-2.5 rounded-lg text-xs font-bold bg-slate-800 hover:bg-slate-700 text-white transition-colors">
+          <i data-lucide="search" class="w-3.5 h-3.5"></i> Buscar
+        </button>
+        <button id="empXls" type="button" disabled class="inline-flex items-center justify-center gap-1.5 px-6 py-2.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+          <i data-lucide="sheet" class="w-3.5 h-3.5"></i> Descargar XLS
+        </button>
+      </div>
+      <div id="empSt" class="text-xs text-slate-500 font-mono bg-slate-50 px-3 py-2 rounded-lg border border-slate-200">Introduce el número de pedido u orden y pulsa Buscar.</div>
+      <div class="table-container overflow-auto rounded-lg border border-slate-200 shadow-sm max-h-[22rem]" id="empTabla"></div>
     </section>
     </div>
 
@@ -1120,7 +1240,7 @@ function codigoLpn(){
   return ord.map(x=>({orden:x.orden,code:x.code,desc:x.desc,total:x.total,lpns:x.p.join(', ')}));
 }
 
-function pdf(L,nombre){
+function pdf(L,nombre,preview){
   L=Array.isArray(L)?L:LPNS;
   const {jsPDF}=window.jspdf;const doc=new jsPDF({orientation:'landscape',unit:'pt',format:'a4'});
   const W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight();
@@ -1170,6 +1290,7 @@ function pdf(L,nombre){
   const total={};pages.forEach(p=>{total[p.k]=(total[p.k]||0)+1});const cnt={};
   pages.forEach(p=>{cnt[p.k]=(cnt[p.k]||0)+1;doc.setPage(p.pg);doc.setFontSize(9);doc.setTextColor(0);
     const t='Página '+cnt[p.k]+' de '+total[p.k];doc.text(t,560,38);doc.text(t,W-90,H-52)});
+  if(preview)return doc.output('bloburl');
   doc.save((nombre||'Picking_LPN_')+L[0].orden+(grupos.length>1?'_y_otros':'')+'.pdf');
 }
 
@@ -1198,9 +1319,9 @@ function detalle(){
 }
 
 // Resumen por pedido / código / lote: LPN de cajas master (conteo) y, en una segunda línea, el saldo
-function resumenEmpaque(){
+function empaqueRows(L){
   const g={},ord=[];
-  LPNS.forEach(l=>l.lines.forEach(x=>{
+  L.forEach(l=>l.lines.forEach(x=>{
     const r=x.r,k=[l.orden,r.PEDIDO,x.code,r['LOTE CLIENTE'],r.EXPIRA].join('||');
     if(!g[k]){g[k]={ORDEN:l.orden,PEDIDO:r.PEDIDO,CODIGO:x.code,LOTE:r['LOTE CLIENTE'],EXPIRA:r.EXPIRA,f:num(r['FACTOR DE EMPAQUE'])||0,u:0};ord.push(g[k])}
     g[k].u+=x.units;
@@ -1213,8 +1334,13 @@ function resumenEmpaque(){
     if(nb>0)out.push({...base,TIPO:'CAJA MASTER',CANT_LPN:nb,TOTAL_UNIDADES:nb*o.f,FACTOR_EMPAQUE:o.f});
     if(sd>0)out.push({...base,TIPO:'SALDO',CANT_LPN:1,TOTAL_UNIDADES:sd,FACTOR_EMPAQUE:o.f});
   });
+  return out;
+}
+const COLS_EMP=['ORDEN','PEDIDO','CODIGO','LOTE','EXPIRA','TIPO','CANT_LPN','TOTAL_UNIDADES','FACTOR_EMPAQUE'];
+function resumenEmpaque(){
+  const out=empaqueRows(LPNS);
   const wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(out,{header:['ORDEN','PEDIDO','CODIGO','LOTE','EXPIRA','TIPO','CANT_LPN','TOTAL_UNIDADES','FACTOR_EMPAQUE']}),'RESUMEN');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(out,{header:COLS_EMP}),'RESUMEN');
   XLSX.writeFile(wb,'RESUMEN_EMPAQUE_LPN.xls',{bookType:'biff8'});
 }
 
@@ -1256,7 +1382,7 @@ function reconstruir(header,rows){
 
 async function buscarReg(){
   const st=$('stReg'),campo=$('regCampo').value,d=$('regDesde').value.trim(),h=$('regHasta').value.trim()||d;
-  REGL=[];$('bRegPdf').disabled=true;$('bRegXls').disabled=true;$('regTabla').innerHTML='';
+  REGL=[];$('bRegPdf').disabled=true;$('bRegXls').disabled=true;$('bRegPrev').disabled=true;$('regTabla').innerHTML='';cerrarRegPrev();
   if(!APPS_URL){st.innerHTML='<span class="text-rose-600">Falta conectar el Sheet (APPS_URL vacía).</span>';return}
   if(!d||isNaN(Number(d))||isNaN(Number(h))){st.innerHTML='<span class="text-rose-600">Escribe un número válido en Desde (y en Hasta si usas rango).</span>';return}
   st.innerHTML='<span class="text-indigo-600">Consultando base histórica de pedidos...</span>';
@@ -1296,30 +1422,94 @@ async function buscarReg(){
           </tbody>
         </table>
       `;
-      $('bRegPdf').disabled=false;$('bRegXls').disabled=false;
+      $('bRegPdf').disabled=false;$('bRegXls').disabled=false;$('bRegPrev').disabled=false;
     }
   }catch(x){st.innerHTML='<span class="text-rose-600 font-bold">Error de búsqueda: '+esc(x.message)+'</span>'}
   $('bRegBuscar').disabled=false;
 }
 $('bRegBuscar').onclick=buscarReg;
-// Reporte: pedido, documento, cliente, LPN, caja, código, descripción, EAN y cantidad, tomado del histórico
+// Reporte de detalle desde el histórico. PEDIDO = orden (BPCS); DOCUMENTO = número de pedido, igual que en la etiqueta
+const COLS_DET=['PEDIDO','DOCUMENTO','CLIENTE','LPN','CAJA','CODIGO','DESCRIPCION','EAN','CANTIDAD'];
+function reporteRows(L,all){
+  const T=v=>String(v==null?'':v).trim();
+  all=all||L;const cnt={},mapa={};
+  all.forEach(l=>{cnt[l.orden]=(cnt[l.orden]||0)+1;mapa[l.orden+'|'+l.lpn]=cnt[l.orden]});
+  const out=[];
+  L.forEach(l=>l.lines.forEach(x=>{const r=x.r;out.push({
+    PEDIDO:T(l.orden),DOCUMENTO:T(r.PEDIDO),CLIENTE:T(r.CLIENTE),LPN:l.lpn,
+    CAJA:(Number(r.CAJA)>0?Number(r.CAJA):mapa[l.orden+'|'+l.lpn]),
+    CODIGO:T(x.code),DESCRIPCION:T(r.DESCRIPCION),EAN:T(r['COD.EAN']),CANTIDAD:x.units})}));
+  return out;
+}
 function reporteHistorico(){
   if(!REGL.length)return;
-  const T=v=>String(v==null?'':v).trim();
-  const tot={},cnt={};REGL.forEach(l=>{tot[l.orden]=(tot[l.orden]||0)+1});
-  const out=[];
-  REGL.forEach(l=>{
-    cnt[l.orden]=(cnt[l.orden]||0)+1;
-    l.lines.forEach(x=>{const r=x.r;out.push({
-      PEDIDO:T(r.PEDIDO),DOCUMENTO:T(l.orden),CLIENTE:T(r.CLIENTE),LPN:l.lpn,CAJA:(Number(r.CAJA)>0?Number(r.CAJA):cnt[l.orden]),TOTAL_CAJAS:(Number(r.TOTAL_CAJAS)>0?Number(r.TOTAL_CAJAS):tot[l.orden]),
-      CODIGO:T(x.code),DESCRIPCION:T(r.DESCRIPCION),EAN:T(r['COD.EAN']),CANTIDAD:x.units})});
-  });
   const wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(out,{header:['PEDIDO','DOCUMENTO','CLIENTE','LPN','CAJA','TOTAL_CAJAS','CODIGO','DESCRIPCION','EAN','CANTIDAD']}),'REPORTE_LPN');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(reporteRows(REGL,REGL),{header:COLS_DET}),'REPORTE_LPN');
   XLSX.writeFile(wb,'REPORTE_LPN_HISTORICO.xls',{bookType:'biff8'});
 }
 $('bRegXls').onclick=reporteHistorico;
 $('bRegPdf').onclick=()=>{if(REGL.length)pdf(REGL,'Picking_REGENERADO_')};
+function cerrarRegPrev(){$('regPrevBox').classList.add('hide');$('regGrid').classList.remove('xl:grid-cols-2');$('regPrev').removeAttribute('src')}
+$('bRegPrevCerrar').onclick=cerrarRegPrev;
+$('bRegPrev').onclick=()=>{
+  if(!REGL.length)return;
+  const o=REGL[0].orden,Lp=REGL.filter(l=>l.orden===o),n=new Set(REGL.map(l=>l.orden)).size;
+  try{$('regPrev').src=pdf(Lp,'Picking_REGENERADO_',true)}catch(e){alert('No se pudo generar la vista previa: '+e.message);return}
+  $('regPrevTit').textContent='Vista previa · orden '+o+(n>1?' (la primera de '+n+'; el PDF incluye todas)':'');
+  $('regPrevBox').classList.remove('hide');$('regGrid').classList.add('xl:grid-cols-2');
+};
+
+// ---- Consultas del histórico con filtro y descarga (Detalle de pedido / Resumen de empaque) ----
+function consultaHist(p,rowsFn,cols,archivo){
+  const g=sfx=>$(p+sfx);let L=[],ROWS=[],ld='',lh='';
+  const nomCli=l=>String(l.head.CLIENTE==null?'':l.head.CLIENTE).trim();
+  const pintar=()=>{
+    const cli=g('Cli').value,LL=cli?L.filter(l=>nomCli(l)===cli):L;
+    ROWS=rowsFn(LL,L);g('Xls').disabled=!ROWS.length;
+    const MAX=100;
+    g('Tabla').innerHTML=ROWS.length?`
+      <table class="w-full text-left text-xs border-collapse">
+        <thead class="sticky top-0"><tr class="bg-slate-100 text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+          ${cols.map(c=>'<th class="py-2.5 px-4 whitespace-nowrap">'+esc(c)+'</th>').join('')}
+        </tr></thead>
+        <tbody class="divide-y divide-slate-100">
+          ${ROWS.slice(0,MAX).map(r=>'<tr class="hover:bg-slate-50 transition-colors">'+cols.map(c=>'<td class="py-2 px-4 font-mono text-slate-700 whitespace-nowrap">'+esc(r[c])+'</td>').join('')+'</tr>').join('')}
+        </tbody>
+      </table>${ROWS.length>MAX?'<div class="p-3 text-xs text-amber-700 bg-amber-50">Vista previa de las primeras '+MAX+' filas; el Excel incluye las '+ROWS.length+'.</div>':''}`:'';
+    const ords=new Set(LL.map(l=>l.orden)).size;
+    g('St').innerHTML=ROWS.length?'<span class="text-emerald-700 font-bold">'+ROWS.length+' filas</span> · '+ords+' orden(es) · '+LL.length+' LPN'+(cli?' · cliente: '+esc(cli):''):'<span class="text-amber-600 font-semibold">Sin datos para ese filtro.</span>';
+  };
+  async function buscar(){
+    const st=g('St'),campo=g('Campo').value,d=g('Desde').value.trim(),h=g('Hasta').value.trim()||d;
+    L=[];ROWS=[];g('Tabla').innerHTML='';g('Xls').disabled=true;g('Cli').innerHTML='<option value="">Todos los clientes</option>';
+    if(!APPS_URL){st.innerHTML='<span class="text-rose-600">Falta conectar el Sheet (APPS_URL vacía).</span>';return}
+    if(!d||isNaN(Number(d))||isNaN(Number(h))){st.innerHTML='<span class="text-rose-600">Escribe un número válido en Desde (y en Hasta si usas rango).</span>';return}
+    st.innerHTML='<span class="text-indigo-600">Consultando base histórica de pedidos...</span>';g('Buscar').disabled=true;
+    try{
+      const q='?action=historico&campo='+encodeURIComponent(campo)+'&desde='+encodeURIComponent(d)+'&hasta='+encodeURIComponent(h)+'&t='+Date.now();
+      const res=await fetch(APPS_URL+q,{cache:'no-store'}),j=await res.json();
+      if(!j.ok)throw new Error(j.error||'respuesta inválida');
+      if(!j.rows.length){st.innerHTML='<span class="text-amber-600 font-semibold">No se encontraron pedidos en ese rango.</span>'}
+      else{
+        L=reconstruir(j.header,j.rows);ld=d;lh=h;
+        const cs=[...new Set(L.map(nomCli))].filter(Boolean).sort();
+        g('Cli').innerHTML='<option value="">Todos los clientes ('+cs.length+')</option>'+cs.map(c=>'<option value="'+esc(c)+'">'+esc(c)+'</option>').join('');
+        pintar();
+      }
+    }catch(x){st.innerHTML='<span class="text-rose-600 font-bold">Error de búsqueda: '+esc(x.message)+'</span>'}
+    g('Buscar').disabled=false;
+  }
+  g('Buscar').onclick=buscar;g('Cli').onchange=pintar;
+  [g('Desde'),g('Hasta')].forEach(el=>el.addEventListener('keydown',e=>{if(e.key==='Enter')buscar()}));
+  g('Xls').onclick=()=>{
+    if(!ROWS.length)return;
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(ROWS,{header:cols}),archivo.slice(0,31));
+    XLSX.writeFile(wb,archivo+'_'+ld+(lh!==ld?'_a_'+lh:'')+'.xls',{bookType:'biff8'});
+  };
+}
+consultaHist('det',reporteRows,COLS_DET,'DETALLE_PEDIDO');
+consultaHist('emp',(LL)=>empaqueRows(LL),COLS_EMP,'RESUMEN_EMPAQUE');
 
 
 // ================== IMPRESIÓN DE ETIQUETAS LPN (104 x 64 mm, Code 128) ==================
@@ -1459,7 +1649,7 @@ async function buscarEtq(){
       ETQL=reconstruir(j.header,j.rows);
       const ords=new Set(ETQL.map(l=>l.orden));
       st.innerHTML='<span class="text-emerald-700 font-bold">'+ETQL.length+' LPN encontrados</span> · '+ords.size+' orden(es). Desmarca los que no quieras imprimir.';
-      const MAX=1000;
+      const MAX=100;
       $('etqTabla').innerHTML=`
         <table class="w-full text-left text-xs border-collapse">
           <thead class="sticky top-0"><tr class="bg-slate-100 text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
@@ -1561,17 +1751,18 @@ async function guardarHistorico(){
 
 $('bCalc').onclick=calcular;$('bPdf').onclick=()=>pdf();$('bXls').onclick=xls;$('bDet').onclick=detalle;$('bEmp').onclick=resumenEmpaque;$('bPla').onclick=plantilla;$('bHis').onclick=guardarHistorico;
 function showTab(t){
-  const V={division:'view-division',regenerar:'view-regenerar',etiquetas:'view-etiquetas'};
-  Object.keys(V).forEach(k=>$(V[k]).classList.toggle('hide',k!==t));
+  const T=[['tabDivision','division','view-division',null],['tabRegenerar','regenerar','view-regenerar','regDesde'],['tabEtiquetas','etiquetas','view-etiquetas','etqDesde'],['tabDetalle','detalle','view-det','detDesde'],['tabEmpaque','empaque','view-emp','empDesde']];
   const on='border-slate-200 bg-white text-slate-900',off='border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100';
-  [['tabDivision','division'],['tabRegenerar','regenerar'],['tabEtiquetas','etiquetas']].forEach(([id,k])=>{
-    const act=k===t,b=$(id);b.setAttribute('aria-selected',act);
+  T.forEach(([id,k,vw,foco])=>{
+    const act=k===t;$(vw).classList.toggle('hide',!act);
+    const b=$(id);b.setAttribute('aria-selected',act);
     b.className='inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-t-lg border border-b-0 -mb-px '+(act?on:off);
+    if(act&&foco)$(foco).focus();
   });
   if(window.lucide)lucide.createIcons();
-  if(t==='regenerar')$('regDesde').focus();
-  if(t==='etiquetas')$('etqDesde').focus();
 }
+$('tabDetalle').onclick=()=>showTab('detalle');
+$('tabEmpaque').onclick=()=>showTab('empaque');
 $('tabEtiquetas').onclick=()=>showTab('etiquetas');
 $('tabDivision').onclick=()=>showTab('division');
 $('tabRegenerar').onclick=()=>showTab('regenerar');
