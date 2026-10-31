@@ -146,6 +146,10 @@
         class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-t-lg border border-b-0 border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100 -mb-px">
         <i data-lucide="tag" class="w-4 h-4"></i> Impresión de LPN
       </button>
+      <button id="tabImd" type="button" role="tab" aria-selected="false"
+        class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-t-lg border border-b-0 border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100 -mb-px">
+        <i data-lucide="list-checks" class="w-4 h-4"></i> Impresión de detalle
+      </button>
       <button id="tabDetalle" type="button" role="tab" aria-selected="false"
         class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-t-lg border border-b-0 border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100 -mb-px">
         <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Detalle de pedido
@@ -386,6 +390,16 @@
                   <span class="shrink-0 px-1.5 py-0.5 rounded font-mono text-xs font-bold bg-slate-700 text-slate-200">SF</span>
                 </div>
                 <p class="mt-2 text-xs text-slate-400 leading-snug">Un código con lotes distintos no comparte LPN.</p>
+              </div>
+            </label>
+            <label class="relative block cursor-pointer">
+              <input type="radio" name="metodo" value="saga20" class="peer sr-only">
+              <div class="opt-card h-full rounded-xl border border-slate-700 bg-slate-800/60 p-4 hover:border-slate-500 peer-checked:border-brand-500 peer-checked:bg-brand-700/15 peer-checked:ring-2 peer-checked:ring-brand-500/40 peer-focus-visible:ring-2 peer-focus-visible:ring-white/60">
+                <div class="flex items-start justify-between gap-2">
+                  <span class="text-sm font-bold text-white leading-tight">Saga · Máx. 20 códigos</span>
+                  <span class="shrink-0 px-1.5 py-0.5 rounded font-mono text-xs font-bold bg-slate-700 text-slate-200">SF</span>
+                </div>
+                <p class="mt-2 text-xs text-slate-400 leading-snug">Reglas de Saga y como máximo 20 códigos distintos por LPN.</p>
               </div>
             </label>
           </div>
@@ -781,6 +795,62 @@
     </section>
     </div>
 
+
+    <div id="view-imd" class="hide">
+    <section class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center shrink-0"><i data-lucide="list-checks" class="w-5 h-5"></i></div>
+          <div>
+            <h3 class="text-base font-bold text-slate-900 tracking-tight">Impresión de detalle por LPN</h3>
+            <p class="text-xs text-slate-500 mt-0.5">Hoja de 104 × 208 mm por LPN con BPCS, LPN, documento y la lista de productos, lotes y cantidades. Si no entran todos, sigue en «Hoja 2 de N».</p>
+          </div>
+        </div>
+        <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono bg-slate-100 text-slate-600 border border-slate-200 self-start sm:self-auto"><span>104 × 208 mm</span></div>
+      </div>
+      <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
+        <div class="xl:col-span-8 space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-12 gap-3.5 items-end">
+            <div class="sm:col-span-3">
+              <label for="imdCampo" class="block text-xs font-semibold text-slate-700 mb-1">Criterio de Búsqueda</label>
+              <select id="imdCampo" class="w-full px-3 py-2 text-xs font-medium bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-400 focus:bg-white text-slate-800">
+                <option value="PEDIDO">N° de Pedido</option>
+                <option value="ORDEN">N° de Orden</option>
+              </select>
+            </div>
+            <div class="sm:col-span-3">
+              <label for="imdDesde" class="block text-xs font-semibold text-slate-700 mb-1">Desde (Valor inicial)</label>
+              <input type="text" id="imdDesde" inputmode="numeric" placeholder="Ej. 1000443350" class="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-400 focus:bg-white text-slate-800">
+            </div>
+            <div class="sm:col-span-3">
+              <label for="imdHasta" class="block text-xs font-semibold text-slate-700 mb-1">Hasta (Opcional si es rango)</label>
+              <input type="text" id="imdHasta" inputmode="numeric" placeholder="Igual a 'Desde' si es único" class="w-full px-3 py-2 text-xs font-mono bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-400 focus:bg-white text-slate-800">
+            </div>
+            <div class="sm:col-span-3">
+              <button id="imdBuscar" type="button" class="w-full inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold bg-slate-800 hover:bg-slate-700 text-white transition-colors">
+                <i data-lucide="search" class="w-3.5 h-3.5"></i> Buscar
+              </button>
+            </div>
+          </div>
+          <div id="imdSt" class="text-xs text-slate-500 font-mono bg-slate-50 px-3 py-2 rounded-lg border border-slate-200">Introduce el número de pedido u orden y pulsa Buscar.</div>
+          <div class="table-container overflow-auto rounded-lg border border-slate-200 shadow-sm max-h-[22rem]" id="imdTabla"></div>
+        </div>
+        <div class="xl:col-span-4 space-y-4">
+          <div class="flex flex-wrap gap-2">
+            <button id="imdPrev" type="button" disabled class="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg text-xs font-bold bg-slate-800 hover:bg-slate-700 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+              <i data-lucide="eye" class="w-3.5 h-3.5"></i> Vista previa
+            </button>
+            <button id="imdPdf" type="button" disabled class="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg text-xs font-bold bg-brand-700 hover:bg-brand-600 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+              <i data-lucide="printer" class="w-3.5 h-3.5"></i> <span id="imdPdfTxt">Detalle PDF</span>
+            </button>
+          </div>
+          <p class="text-xs text-slate-500">Producto = código EAN. Si un producto con el mismo lote está en varias ubicaciones del LPN, se suman en una sola línea. Imprime en tamaño real (100 %).</p>
+          <iframe id="imdFrame" title="Vista previa del detalle" class="hide w-full h-[34rem] rounded-lg border border-slate-200 bg-slate-50"></iframe>
+        </div>
+      </div>
+    </section>
+    </div>
+
   </main>
 
   <!-- EXECUTIVE FOOTER -->
@@ -878,14 +948,15 @@ $('fPed').onchange=async e=>{const f=e.target.files[0];if(!f)return;
   }};
 
 // ---- Criterios por cliente y series de LPN ----
-const PREF={aruma_vol:'TA',aruma_cl:'TA',inretail:'IP',saga:'SF'};
+const PREF={aruma_vol:'TA',aruma_cl:'TA',inretail:'IP',saga:'SF',saga20:'SF'};
 const AYUDA={
   volumen:'Llena cada LPN hasta el volumen máximo. Prefijo y correlativo libres.',
   codlote:'Por código y lote: 1 LPN por caja master completa y un LPN de saldo. Prefijo y correlativo libres.',
   aruma_vol:'Aruma · por volumen. Serie TA000001.',
   aruma_cl:'Aruma · por código y lote (caja master). Serie TA000001.',
   inretail:'InRetail · por volumen. Un código con el mismo lote no se separa en cajas distintas, salvo cajas master. Serie IP000001.',
-  saga:'Saga · por volumen. Un código con lotes distintos no comparte caja. Serie SF000001.'
+  saga:'Saga · por volumen. Un código con lotes distintos no comparte caja. Serie SF000001.',
+  saga20:'Saga · mismas reglas de Saga (volumen, un código con lotes distintos no comparte caja) y máximo 20 códigos distintos por LPN. Serie SF000001.'
 };
 let LASTS={},PRE_LIBRE='',FIJO='';
 const modo=()=>(document.querySelector('input[name="metodo"]:checked')||{}).value||'volumen';
@@ -893,7 +964,7 @@ function memSer(){try{return JSON.parse(localStorage.getItem('lpn_series')||'{}'
 function ultSerie(p){const m=memSer()[p];return Math.max(Number(LASTS[p])||0,m?Number(m.ultimo)||0:0)}
 function aplicarModo(){
   const m=modo(),p=PREF[m];
-  $('boxMaster').classList.toggle('hide',!(m==='inretail'||m==='saga'));
+  $('boxMaster').classList.toggle('hide',!(m==='inretail'||m==='saga'||m==='saga20'));
   $('metodoAyuda').textContent=AYUDA[m]||'';
   if(p){
     if(!$('pre').disabled)PRE_LIBRE=$('pre').value;
@@ -919,7 +990,8 @@ function refresh(){
 function calcular(){
   const m0=modo(),fijo=PREF[m0]||'';
   const cap=num($('cap').value),pre=fijo||$('pre').value.trim(),E=1e-9;
-  const metodo=(m0==='codlote'||m0==='aruma_cl')?'codlote':(m0==='inretail'||m0==='saga')?m0:'volumen';
+  const metodo=(m0==='codlote'||m0==='aruma_cl')?'codlote':(m0==='inretail')?'inretail':(m0==='saga'||m0==='saga20')?'saga':'volumen';
+  const maxCod=m0==='saga20'?20:0;
   let ini=Math.max(1,parseInt($('ini').value)||1);
   LPNS=[];ERR=[];
   FIJO=fijo;PREUSO=pre;
@@ -995,7 +1067,12 @@ function calcular(){
           // Saga: un código con lotes distintos no comparte LPN
           rest.forEach(p=>{
             let u=p.left,partido=false;const u0=p.left,orig=num(p.r.CANTIDAD);
-            const conflicto=()=>cur&&cur.lines.some(l=>l.code===g.code&&loteDe(l.r)!==g.lote);
+            const conflicto=()=>{
+              if(!cur)return false;
+              if(cur.lines.some(l=>l.code===g.code&&loteDe(l.r)!==g.lote))return true;           // mismo código con otro lote
+              if(maxCod&&!cur.lines.some(l=>l.code===g.code)&&new Set(cur.lines.map(l=>l.code)).size>=maxCod)return true; // ya hay 20 códigos distintos
+              return false;
+            };
             while(u>0){
               if(!cur||conflicto())nuevo();
               const fit=Math.floor((cap-cur.vol+E)/uv);
@@ -1687,6 +1764,108 @@ $('bEtqPrev').onclick=()=>{
   fr.classList.remove('hide');fr.src=doc.output('bloburl');
 };
 
+
+// ================== IMPRESIÓN DE DETALLE POR LPN (104 x 208 mm) ==================
+function detalleDoc(L){
+  const {jsPDF}=window.jspdf;
+  const W=104,H=208,Y0=44,PITCH=4.4,YMAX=200,PER=Math.floor((YMAX-Y0)/PITCH)+1;
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:[W,H]});
+  const T=v=>String(v==null?'':v).trim();
+  let primera=true;
+  const fit=(txt,fs,max,min)=>{doc.setFontSize(fs);while(fs>min&&doc.getTextWidth(txt)>max){fs-=0.5;doc.setFontSize(fs)}return fs};
+  L.forEach(l=>{
+    const h=l.head,mp={},rows=[];
+    l.lines.forEach(x=>{
+      const r=x.r,ean=T(r['COD.EAN'])||T(x.code),lote=T(r['LOTE CLIENTE']),k=ean+'|'+lote;
+      if(!mp[k]){mp[k]={ean,lote,u:0};rows.push(mp[k])}mp[k].u+=x.units;
+    });
+    const pages=Math.max(1,Math.ceil(rows.length/PER));
+    for(let p=0;p<pages;p++){
+      if(!primera)doc.addPage([W,H],'portrait');primera=false;
+      doc.setTextColor(0);doc.setDrawColor(0);doc.setFont('helvetica','bold');
+      // encabezado: rótulos alineados a la derecha, valores a la izquierda
+      let lf=13;doc.setFontSize(lf);while(lf>8&&doc.getTextWidth('DOCUMENTO:')>34){lf-=0.5;doc.setFontSize(lf)}
+      const lab=(t,y)=>{doc.setFontSize(lf);doc.text(t,38,y,{align:'right'})};
+      const val=(t,y)=>{fit(t,21,W-42-4,9);doc.text(t,42,y)};
+      lab('BPCS:',9);val(T(h.ORDEN),9);
+      lab('LPN:',16.5);val(T(l.lpn),16.5);
+      lab('DOCUMENTO:',24);val(T(h.PEDIDO),24);
+      // cabecera de la tabla
+      doc.setFontSize(14);
+      doc.text('Producto',5,36.7);doc.text('Lote',55,36.7,{align:'center'});doc.text('Cantidad',88,36.7,{align:'center'});
+      doc.setLineWidth(0.4);doc.line(5,38.5,99,38.5);
+      // filas
+      rows.slice(p*PER,(p+1)*PER).forEach((r,i)=>{
+        const y=Y0+i*PITCH;
+        fit(r.ean,9,40,6);doc.text(r.ean,5,y);
+        fit(r.lote,9,28,6);doc.text(r.lote,55,y,{align:'center'});
+        doc.setFontSize(9);const q=Number.isInteger(r.u)?String(r.u):String(+r.u.toFixed(2));doc.text(q,88,y,{align:'center'});
+      });
+      if(pages>1){doc.setFontSize(9);doc.text('Hoja '+(p+1)+' de '+pages,W/2,205,{align:'center'})}
+    }
+  });
+  return doc;
+}
+(function(){
+  let L=[];
+  const sel=()=>L.filter((l,i)=>{const c=document.querySelector('input[data-imd="'+i+'"]');return c?c.checked:true});
+  const cuenta=()=>{
+    const n=sel().length;$('imdPdfTxt').textContent='Detalle PDF ('+n+')';
+    $('imdPdf').disabled=$('imdPrev').disabled=!n;
+    const t=$('imdTodos');if(t)t.checked=n===L.length;
+  };
+  async function buscar(){
+    const st=$('imdSt'),campo=$('imdCampo').value,d=$('imdDesde').value.trim(),h=$('imdHasta').value.trim()||d;
+    L=[];$('imdTabla').innerHTML='';cuenta();$('imdFrame').classList.add('hide');
+    if(!APPS_URL){st.innerHTML='<span class="text-rose-600">Falta conectar el Sheet (APPS_URL vacía).</span>';return}
+    if(!d||isNaN(Number(d))||isNaN(Number(h))){st.innerHTML='<span class="text-rose-600">Escribe un número válido en Desde (y en Hasta si usas rango).</span>';return}
+    st.innerHTML='<span class="text-indigo-600">Consultando base histórica de pedidos...</span>';$('imdBuscar').disabled=true;
+    try{
+      const q='?action=historico&campo='+encodeURIComponent(campo)+'&desde='+encodeURIComponent(d)+'&hasta='+encodeURIComponent(h)+'&t='+Date.now();
+      const res=await fetch(APPS_URL+q,{cache:'no-store'}),j=await res.json();
+      if(!j.ok)throw new Error(j.error||'respuesta inválida');
+      if(!j.rows.length){st.innerHTML='<span class="text-amber-600 font-semibold">No se encontraron pedidos en ese rango.</span>'}
+      else{
+        L=reconstruir(j.header,j.rows);
+        const MAX=100,ords=new Set(L.map(l=>l.orden)).size;
+        st.innerHTML='<span class="text-emerald-700 font-bold">'+L.length+' LPN encontrados</span> · '+ords+' orden(es). Desmarca los que no quieras imprimir.';
+        $('imdTabla').innerHTML=`
+          <table class="w-full text-left text-xs border-collapse">
+            <thead class="sticky top-0"><tr class="bg-slate-100 text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+              <th class="py-2.5 px-4 w-10"><input type="checkbox" id="imdTodos" checked class="accent-red-600"></th>
+              <th class="py-2.5 px-4">LPN</th><th class="py-2.5 px-4">BPCS (Orden)</th><th class="py-2.5 px-4">Documento (Pedido)</th><th class="py-2.5 px-4 text-right">Productos</th><th class="py-2.5 px-4 text-right">Unidades</th>
+            </tr></thead>
+            <tbody class="divide-y divide-slate-100">
+            ${L.slice(0,MAX).map((l,i)=>`
+              <tr class="hover:bg-slate-50 transition-colors">
+                <td class="py-2 px-4"><input type="checkbox" data-imd="${i}" checked class="accent-red-600"></td>
+                <td class="py-2 px-4 font-mono font-bold text-slate-900">${esc(l.lpn)}</td>
+                <td class="py-2 px-4 font-mono text-slate-700">${esc(l.head.ORDEN)}</td>
+                <td class="py-2 px-4 font-mono text-slate-700">${esc(l.head.PEDIDO)}</td>
+                <td class="py-2 px-4 text-right font-mono text-slate-700">${l.lines.length}</td>
+                <td class="py-2 px-4 text-right font-mono font-semibold text-slate-800">${l.lines.reduce((a,x)=>a+x.units,0)}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>${L.length>MAX?'<div class="p-3 text-xs text-amber-700 bg-amber-50">Se muestran los primeros '+MAX+' LPN; el PDF incluye todos los marcados.</div>':''}`;
+        $('imdTodos').onchange=ev=>{document.querySelectorAll('input[data-imd]').forEach(c=>{c.checked=ev.target.checked});cuenta()};
+        $('imdTabla').onchange=ev=>{if(ev.target.dataset&&ev.target.dataset.imd!==undefined)cuenta()};
+      }
+    }catch(x){st.innerHTML='<span class="text-rose-600 font-bold">Error de búsqueda: '+esc(x.message)+'</span>'}
+    $('imdBuscar').disabled=false;cuenta();
+    if(window.lucide)lucide.createIcons();
+  }
+  $('imdBuscar').onclick=buscar;
+  [$('imdDesde'),$('imdHasta')].forEach(el=>el.addEventListener('keydown',e=>{if(e.key==='Enter')buscar()}));
+  $('imdPdf').onclick=()=>{
+    const S=sel();if(!S.length)return;
+    detalleDoc(S).save('DETALLE_LPN_'+S[0].orden+(new Set(S.map(l=>l.orden)).size>1?'_y_otros':'')+'.pdf');
+  };
+  $('imdPrev').onclick=()=>{
+    const S=sel();if(!S.length)return;
+    const fr=$('imdFrame');fr.classList.remove('hide');fr.src=detalleDoc([S[0]]).output('bloburl');
+  };
+})();
+
 async function cargarConfig(){
   if(!APPS_URL){return}
   try{
@@ -1751,7 +1930,7 @@ async function guardarHistorico(){
 
 $('bCalc').onclick=calcular;$('bPdf').onclick=()=>pdf();$('bXls').onclick=xls;$('bDet').onclick=detalle;$('bEmp').onclick=resumenEmpaque;$('bPla').onclick=plantilla;$('bHis').onclick=guardarHistorico;
 function showTab(t){
-  const T=[['tabDivision','division','view-division',null],['tabRegenerar','regenerar','view-regenerar','regDesde'],['tabEtiquetas','etiquetas','view-etiquetas','etqDesde'],['tabDetalle','detalle','view-det','detDesde'],['tabEmpaque','empaque','view-emp','empDesde']];
+  const T=[['tabDivision','division','view-division',null],['tabRegenerar','regenerar','view-regenerar','regDesde'],['tabEtiquetas','etiquetas','view-etiquetas','etqDesde'],['tabImd','imd','view-imd','imdDesde'],['tabDetalle','detalle','view-det','detDesde'],['tabEmpaque','empaque','view-emp','empDesde']];
   const on='border-slate-200 bg-white text-slate-900',off='border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100';
   T.forEach(([id,k,vw,foco])=>{
     const act=k===t;$(vw).classList.toggle('hide',!act);
@@ -1761,6 +1940,7 @@ function showTab(t){
   });
   if(window.lucide)lucide.createIcons();
 }
+$('tabImd').onclick=()=>showTab('imd');
 $('tabDetalle').onclick=()=>showTab('detalle');
 $('tabEmpaque').onclick=()=>showTab('empaque');
 $('tabEtiquetas').onclick=()=>showTab('etiquetas');
