@@ -399,7 +399,7 @@
                   <span class="text-sm font-bold text-white leading-tight">Saga · Máx. 20 códigos</span>
                   <span class="shrink-0 px-1.5 py-0.5 rounded font-mono text-xs font-bold bg-slate-700 text-slate-200">SF</span>
                 </div>
-                <p class="mt-2 text-xs text-slate-400 leading-snug">Reglas de Saga y como máximo 20 códigos distintos por LPN.</p>
+                <p class="mt-2 text-xs text-slate-400 leading-snug">Reglas de Saga, máximo 20 códigos distintos por LPN y cada LPN ocupa solo hasta el 85% de la caja.</p>
               </div>
             </label>
           </div>
@@ -956,7 +956,7 @@ const AYUDA={
   aruma_cl:'Aruma · por código y lote (caja master). Serie TA000001.',
   inretail:'InRetail · por volumen. Un código con el mismo lote no se separa en cajas distintas, salvo cajas master. Serie IP000001.',
   saga:'Saga · por volumen. Un código con lotes distintos no comparte caja. Serie SF000001.',
-  saga20:'Saga · mismas reglas de Saga (volumen, un código con lotes distintos no comparte caja) y máximo 20 códigos distintos por LPN. Serie SF000001.'
+  saga20:'Saga · mismas reglas de Saga (volumen, un código con lotes distintos no comparte caja) y máximo 20 códigos distintos por LPN. Cada LPN se llena como máximo al 85% del volumen de la caja. Serie SF000001.'
 };
 let LASTS={},PRE_LIBRE='',FIJO='';
 const modo=()=>(document.querySelector('input[name="metodo"]:checked')||{}).value||'volumen';
@@ -992,6 +992,7 @@ function calcular(){
   const cap=num($('cap').value),pre=fijo||$('pre').value.trim(),E=1e-9;
   const metodo=(m0==='codlote'||m0==='aruma_cl')?'codlote':(m0==='inretail')?'inretail':(m0==='saga'||m0==='saga20')?'saga':'volumen';
   const maxCod=m0==='saga20'?20:0;
+  const capL=m0==='saga20'?cap*0.85:cap; // Saga 20: cada LPN se llena como máximo al 85% de la caja
   let ini=Math.max(1,parseInt($('ini').value)||1);
   LPNS=[];ERR=[];
   FIJO=fijo;PREUSO=pre;
@@ -1043,7 +1044,7 @@ function calcular(){
       cur=null;
       const tomar=(rest,n)=>{const out=[];for(const p of rest){if(n<=0)break;const t=Math.min(n,p.left);if(t>0){out.push({r:p.r,units:t,parte:t<num(p.r.CANTIDAD)});p.left-=t;n-=t}}return out};
       piezas.forEach(pz=>{
-        const {g,uv,f,rest}=pz,maxU=Math.floor((cap+E)/uv);
+        const {g,uv,f,rest}=pz,maxU=Math.floor((capL+E)/uv);
         if(metodo==='inretail'){
           // mismo código y lote juntos en un solo LPN; solo se corta si no cabe, en múltiplos de caja master
           let total=rest.reduce((s,p)=>s+p.left,0);
@@ -1060,7 +1061,7 @@ function calcular(){
           }
           if(total>0){
             const vt=total*uv;
-            if(!cur||cur.vol+vt>cap+E)nuevo();
+            if(!cur||cur.vol+vt>capL+E)nuevo();
             tomar(rest,total).forEach(t=>{cur.lines.push({r:t.r,code:g.code,units:t.units,vol:t.units*uv,parte:t.parte});cur.vol+=t.units*uv});
           }
         }else{
@@ -1075,7 +1076,7 @@ function calcular(){
             };
             while(u>0){
               if(!cur||conflicto())nuevo();
-              const fit=Math.floor((cap-cur.vol+E)/uv);
+              const fit=Math.floor((capL-cur.vol+E)/uv);
               if(fit>=u){cur.lines.push({r:p.r,code:g.code,units:u,vol:u*uv,parte:partido||u0<orig});cur.vol+=u*uv;u=0;break}
               if(maxU>=u&&cur.lines.length){nuevo();continue}
               let take=Math.floor(fit/f)*f;
