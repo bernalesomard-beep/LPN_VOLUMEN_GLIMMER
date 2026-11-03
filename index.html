@@ -2052,16 +2052,18 @@ function prRender(){$('prT').innerHTML='<table class="w-full text-xs"><thead><tr
 function prCuenta(){const n=prTot(),sin=PR.filter(p=>!p.ok).length;$('prPdfT').textContent='PDF ('+n+' etiquetas)';$('prPdf').disabled=$('prPrev').disabled=!n;
  stMsg('pr',PR.length+' productos · '+n+' etiquetas'+(sin?' · '+sin+' sin catálogo o EAN inválido (no se imprimen)':''),!!sin)}
 const prIn=(id,v,t)=>`<label class="flex flex-col text-[10px] text-slate-500">${t}<input id="${id}" type="number" step="0.5" value="${v}" class="border border-slate-200 rounded-lg px-2 py-1.5 text-sm w-20 text-slate-900"></label>`;
-const pinp=()=>prIn('prAn',33,'Ancho mm')+prIn('prAl',40,'Alto mm')+prIn('prCo',3,'Columnas')+prIn('prDx',0,'Desplaz. X')+prIn('prDy',0,'Desplaz. Y')+prIn('prSv',3,'Sep. vert. mm')+prIn('prSh',0,'Sep. horiz. mm');
-function prEtq(doc,c,ox,oy,an){const mx=ox+3;doc.setTextColor(0);doc.setFont('helvetica','bold');doc.setFontSize(6);
- doc.splitTextToSize(String(c[2]),an-6).slice(0,2).forEach((t,i)=>doc.text(t,mx,oy+3.5+i*2.5));
- doc.text(String(c[3]),mx,oy+9);doc.text(String(c[4]),mx,oy+11.5);doc.setFontSize(11);doc.text(String(c[6]),mx,oy+15.8);
- const s=ean13(c[0]),md=0.25,x0=ox+(an-95*md)/2+1,yt=oy+17.5,hb=7.9,hg=1.7;let i=0;
- while(i<95){if(s[i]==='1'){let j=i;while(j<95&&s[j]==='1')j++;const g=i<3||(i>=45&&i<50)||i>=92;doc.rect(x0+i*md,yt,(j-i)*md,hb+(g?hg:0),'F');i=j}else i++}
- const yd=yt+hb+1.6;doc.setFontSize(5.5);doc.text(c[0][0],x0-2.2,yd);doc.text(c[0].slice(1,7),x0+24*md,yd,{align:'center'});doc.text(c[0].slice(7),x0+71*md,yd,{align:'center'});
- doc.setFontSize(7);doc.text('S/.',mx,oy+33.5);doc.setFontSize(12);doc.text(Number(c[7]).toFixed(2),mx+7,oy+33.5)}
-function prDoc(){const {jsPDF}=window.jspdf,v=id=>+$(id).value||0,g={an:v('prAn')||33,al:v('prAl')||40,co:Math.max(1,Math.round(v('prCo'))||3),dx:v('prDx'),dy:v('prDy'),sv:v('prSv'),sh:v('prSh')},pg=[g.co*g.an+(g.co-1)*g.sh,g.al+g.sv],doc=new jsPDF({orientation:'landscape',unit:'mm',format:pg});let n=0;
- PR.filter(p=>p.ok).forEach(p=>{for(let u=0;u<Math.max(0,Math.round(p.u));u++){if(n&&n%g.co===0)doc.addPage(pg,'landscape');prEtq(doc,p.c,(n%g.co)*(g.an+g.sh)+g.dx,g.dy,g.an);n++}});return doc}
+const pinp=()=>prIn('prAn',27,'Ancho mm')+prIn('prAl',30,'Alto mm')+prIn('prCo',3,'Columnas')+prIn('prDx',0,'Desplaz. X')+prIn('prDy',0,'Desplaz. Y')+prIn('prSv',2,'Sep. vert. mm')+prIn('prSh',2,'Sep. horiz. mm');
+function prEtq(doc,c,ox,oy,an,al){
+ const p=al>=36?{fn:6,ln:2.5,y0:3.5,ym:9,yd:11.5,ys:15.8,fs:11,bt:17.5,hb:7.9,hg:1.7,dg:5.5,yp:33.5,fp:12}:{fn:5.5,ln:2.2,y0:2.6,ym:7,yd:9.2,ys:12.6,fs:10,bt:14,hb:6.5,hg:1.5,dg:5,yp:al-3,fp:10.5};
+ const m=an<30?2.2:3,mx=ox+m;doc.setTextColor(0);doc.setFont('helvetica','bold');doc.setFontSize(p.fn);
+ doc.splitTextToSize(String(c[2]),an-2*m).slice(0,2).forEach((t,i)=>doc.text(t,mx,oy+p.y0+i*p.ln));
+ doc.text(String(c[3]),mx,oy+p.ym);doc.text(String(c[4]),mx,oy+p.yd);doc.setFontSize(p.fs);doc.text(String(c[6]),mx,oy+p.ys);
+ const s=ean13(c[0]),md=0.25,x0=ox+(an-95*md)/2+1,yt=oy+p.bt;let i=0;
+ while(i<95){if(s[i]==='1'){let j=i;while(j<95&&s[j]==='1')j++;const g=i<3||(i>=45&&i<50)||i>=92;doc.rect(x0+i*md,yt,(j-i)*md,p.hb+(g?p.hg:0),'F');i=j}else i++}
+ const yd=yt+p.hb+p.hg-0.1;doc.setFontSize(p.dg);doc.text(c[0][0],x0-2.2,yd);doc.text(c[0].slice(1,7),x0+24*md,yd,{align:'center'});doc.text(c[0].slice(7),x0+71*md,yd,{align:'center'});
+ doc.setFontSize(p.fp*0.6);doc.text('S/.',mx,oy+p.yp);doc.setFontSize(p.fp);doc.text(Number(c[7]).toFixed(2),mx+(an<30?6:7),oy+p.yp)}
+function prDoc(){const {jsPDF}=window.jspdf,v=id=>+$(id).value||0,g={an:v('prAn')||27,al:v('prAl')||30,co:Math.max(1,Math.round(v('prCo'))||3),dx:v('prDx'),dy:v('prDy'),sv:v('prSv'),sh:v('prSh')},pg=[g.co*g.an+(g.co-1)*g.sh,g.al+g.sv],doc=new jsPDF({orientation:'landscape',unit:'mm',format:pg});let n=0;
+ PR.filter(p=>p.ok).forEach(p=>{for(let u=0;u<Math.max(0,Math.round(p.u));u++){if(n&&n%g.co===0)doc.addPage(pg,'landscape');prEtq(doc,p.c,(n%g.co)*(g.an+g.sh)+g.dx,g.dy,g.an,g.al);n++}});return doc}
 
 $('view-datos').insertAdjacentHTML('afterend',
  '<div id="view-lpns" class="hide space-y-6">'+busBox('ls','Etiqueta LPN Saga (104 × 64 mm)',bx('lsPdf','Etiquetas PDF')+bx('lsPrev','Vista previa')+bx('lsSave','Guardar cita y fecha en OC-TIENDA'))+'</div>'+
