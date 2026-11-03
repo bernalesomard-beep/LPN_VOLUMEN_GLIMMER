@@ -1982,7 +1982,8 @@ $('tabDatos').onclick=()=>{showTab('datos');if(APPS_URL&&!DS.oc.rows.length&&!DS
 
 
 // ---- Etiqueta LPN Saga y Etiqueta de precio ----
-const MAPA={oc:'PEDIDO',tienda:'HSHIP'}; // columnas del histórico que equivalen a ORDEN DE COMPRA y COD TIENDA de OC-TIENDA
+const MAPA={doc:'PEDIDO',tienda:'HSHIP'}; // PEDIDO del histórico = DOCUMENTO de OC-TIENDA; HSHIP solo se usa si el documento no está en OC-TIENDA
+const nd=v=>{v=String(v==null?'':v).trim().toUpperCase();const m=v.match(/^([A-Z0-9]+)-0*(\d+)$/);return m?m[1]+'-'+m[2]:v}; // T001-0000119 y T001-0119 son el mismo documento
 let LS=[],GR={},PR=[];
 const q2=async a=>{const j=await (await fetch(APPS_URL+'?action='+a+'&t='+Date.now(),{cache:'no-store'})).json();if(!j.ok)throw new Error(j.error||'respuesta inválida');return j};
 const inpC='border border-slate-200 rounded-lg px-3 py-2 text-sm w-32';
@@ -2002,13 +2003,14 @@ async function bajar(p){const c=$(p+'Campo').value,d=$(p+'Desde').value.trim(),h
 // --- LPN Saga ---
 async function lsBuscar(){stMsg('ls','Consultando...');
  try{const [{L,idx},oc]=await Promise.all([bajar('ls'),q2('oc')]);LS=L;GR={};
-  L.forEach(l=>{const hd=l.head,o=String(hd[MAPA.oc]||'').trim(),t=String(hd[MAPA.tienda]||'').trim(),k=o+'|'+t,c=idx[String(hd['COD.EAN']||'').trim()]||idx[l.lines[0].code];
+  L.forEach(l=>{const hd=l.head,k=nd(hd[MAPA.doc]),c=idx[String(hd['COD.EAN']||'').trim()]||idx[l.lines[0].code];
    l.k=k;l.linea=c?c[5]:'';
-   if(!GR[k]){const m=oc.rows.filter(r=>r[0]===o),f=m.find(r=>r[2]===t)||(m.length===1?m[0]:[]);GR[k]={o,t:f[2]||t,doc:f[1]||'',cita:f[4]||'',fecha:f[5]||'',n:0}}GR[k].n++});
-  lsRender();stMsg('ls',L.length+' LPN en '+Object.keys(GR).length+' grupo(s) OC/tienda. Completa ID de cita y fecha (ej. 30-Ago).')}
+   if(!GR[k]){const f=oc.rows.find(r=>nd(r[1])===k)||[];GR[k]={doc:String(hd[MAPA.doc]||'').trim(),o:f[0]||'',t:f[2]||String(hd[MAPA.tienda]||'').trim(),cita:f[4]||'',fecha:f[5]||'',ok:f.length>0,n:0}}GR[k].n++});
+  const sin=Object.values(GR).filter(g=>!g.ok).length;lsRender();
+  stMsg('ls',L.length+' LPN en '+Object.keys(GR).length+' documento(s).'+(sin?' '+sin+' sin datos en OC-TIENDA: completa O/C y Local a mano.':' Completa ID de cita y fecha (ej. 30-Ago).'),!!sin)}
  catch(e){stMsg('ls','Error: '+e.message,true)}}
-function lsRender(){$('lsT').innerHTML='<table class="w-full text-xs"><thead><tr>'+['O/C','Local','ID de cita','Fecha de entrega','LPN'].map(c=>`<th class="text-left py-2 px-2 text-slate-500">${c}</th>`).join('')+'</tr></thead><tbody>'+
- Object.keys(GR).map(k=>{const g=GR[k];return `<tr class="border-t border-slate-100"><td class="px-2 py-1.5 font-mono">${esc(g.o)}</td>`+['t','cita','fecha'].map(f=>`<td class="px-1"><input data-g="${esc(k)}" data-f="${f}" value="${esc(g[f])}" class="lsin border border-slate-300 rounded px-2 py-1 w-32"></td>`).join('')+`<td class="px-2">${g.n}</td></tr>`}).join('')+'</tbody></table>';
+function lsRender(){$('lsT').innerHTML='<table class="w-full text-xs"><thead><tr>'+['Documento','O/C','Local','ID de cita','Fecha de entrega','LPN','OC-TIENDA'].map(c=>`<th class="text-left py-2 px-2 text-slate-500">${c}</th>`).join('')+'</tr></thead><tbody>'+
+ Object.keys(GR).map(k=>{const g=GR[k];return `<tr class="border-t border-slate-100"><td class="px-2 py-1.5 font-mono">${esc(g.doc)}</td>`+['o','t','cita','fecha'].map(f=>`<td class="px-1"><input data-g="${esc(k)}" data-f="${f}" value="${esc(g[f])}" class="lsin border border-slate-300 rounded px-2 py-1 w-32"></td>`).join('')+`<td class="px-2">${g.n}</td><td class="px-2 ${g.ok?'text-emerald-700':'text-rose-600'}">${g.ok?'encontrado':'no encontrado'}</td></tr>`}).join('')+'</tbody></table>';
  ['lsPdf','lsPrev','lsSave'].forEach(i=>$(i).disabled=false)}
 function lsEtq(doc,l,mod){const W=104,mx=5,X0=mx+38,g=GR[l.k],hd=l.head;
  doc.setTextColor(0);doc.setDrawColor(0);doc.setLineWidth(0.25);doc.setFont('helvetica','bold');
@@ -2052,10 +2054,10 @@ function prCuenta(){const n=prTot(),sin=PR.filter(p=>!p.ok).length;$('prPdfT').t
 function prEtq(doc,c,ox){doc.setTextColor(0);doc.setFont('helvetica','bold');doc.setFontSize(6);
  doc.splitTextToSize(String(c[2]),29).slice(0,2).forEach((t,i)=>doc.text(t,ox+2,3.5+i*2.6));
  doc.text(String(c[3]),ox+2,9);doc.text(String(c[4]),ox+2,11.8);doc.setFontSize(12);doc.text(String(c[6]),ox+2,17);
- const s=ean13(c[0]),md=0.25,x0=ox+(33-95*md)/2+1;let i=0;
- while(i<95){if(s[i]==='1'){let j=i;while(j<95&&s[j]==='1')j++;doc.rect(x0+i*md,19.5,(j-i)*md,11,'F');i=j}else i++}
- doc.setFontSize(6);doc.text(c[0][0],x0-1.8,33.5);doc.text(c[0].slice(1,7),x0+24*md,33.5,{align:'center'});doc.text(c[0].slice(7),x0+71*md,33.5,{align:'center'});
- doc.setFontSize(7);doc.text('S/.',ox+2,38);doc.setFontSize(12);doc.text(Number(c[7]).toFixed(2),ox+9,38)}
+ const s=ean13(c[0]),md=0.25,x0=ox+(33-95*md)/2+1,yt=20.5,hb=7.9,hg=1.7;let i=0;
+ while(i<95){if(s[i]==='1'){let j=i;while(j<95&&s[j]==='1')j++;const g=i<3||(i>=45&&i<50)||i>=92;doc.rect(x0+i*md,yt,(j-i)*md,hb+(g?hg:0),'F');i=j}else i++}
+ const yd=yt+hb+1.6;doc.setFontSize(5.5);doc.text(c[0][0],x0-2.2,yd);doc.text(c[0].slice(1,7),x0+24*md,yd,{align:'center'});doc.text(c[0].slice(7),x0+71*md,yd,{align:'center'});
+ doc.setFontSize(7);doc.text('S/.',ox+2,37.5);doc.setFontSize(12);doc.text(Number(c[7]).toFixed(2),ox+9,37.5)}
 function prDoc(){const {jsPDF}=window.jspdf,doc=new jsPDF({orientation:'landscape',unit:'mm',format:[99,40]});let n=0;
  PR.filter(p=>p.ok).forEach(p=>{for(let u=0;u<Math.max(0,Math.round(p.u));u++){if(n&&n%3===0)doc.addPage([99,40],'landscape');prEtq(doc,p.c,(n%3)*33);n++}});return doc}
 
