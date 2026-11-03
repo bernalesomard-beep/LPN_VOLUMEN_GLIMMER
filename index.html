@@ -2051,19 +2051,21 @@ function prRender(){$('prT').innerHTML='<table class="w-full text-xs"><thead><tr
  prCuenta()}
 function prCuenta(){const n=prTot(),sin=PR.filter(p=>!p.ok).length;$('prPdfT').textContent='PDF ('+n+' etiquetas)';$('prPdf').disabled=$('prPrev').disabled=!n;
  stMsg('pr',PR.length+' productos · '+n+' etiquetas'+(sin?' · '+sin+' sin catálogo o EAN inválido (no se imprimen)':''),!!sin)}
-function prEtq(doc,c,ox){doc.setTextColor(0);doc.setFont('helvetica','bold');doc.setFontSize(6);
- doc.splitTextToSize(String(c[2]),29).slice(0,2).forEach((t,i)=>doc.text(t,ox+2,3.5+i*2.6));
- doc.text(String(c[3]),ox+2,9);doc.text(String(c[4]),ox+2,11.8);doc.setFontSize(12);doc.text(String(c[6]),ox+2,17);
- const s=ean13(c[0]),md=0.25,x0=ox+(33-95*md)/2+1,yt=20.5,hb=7.9,hg=1.7;let i=0;
+const prIn=(id,v,t)=>`<label class="flex flex-col text-[10px] text-slate-500">${t}<input id="${id}" type="number" step="0.5" value="${v}" class="border border-slate-200 rounded-lg px-2 py-1.5 text-sm w-20 text-slate-900"></label>`;
+const pinp=()=>prIn('prAn',33,'Ancho mm')+prIn('prAl',40,'Alto mm')+prIn('prCo',3,'Columnas')+prIn('prDx',0,'Desplaz. X')+prIn('prDy',0,'Desplaz. Y')+prIn('prSv',3,'Sep. vert. mm')+prIn('prSh',0,'Sep. horiz. mm');
+function prEtq(doc,c,ox,oy,an){const mx=ox+3;doc.setTextColor(0);doc.setFont('helvetica','bold');doc.setFontSize(6);
+ doc.splitTextToSize(String(c[2]),an-6).slice(0,2).forEach((t,i)=>doc.text(t,mx,oy+3.5+i*2.5));
+ doc.text(String(c[3]),mx,oy+9);doc.text(String(c[4]),mx,oy+11.5);doc.setFontSize(11);doc.text(String(c[6]),mx,oy+15.8);
+ const s=ean13(c[0]),md=0.25,x0=ox+(an-95*md)/2+1,yt=oy+17.5,hb=7.9,hg=1.7;let i=0;
  while(i<95){if(s[i]==='1'){let j=i;while(j<95&&s[j]==='1')j++;const g=i<3||(i>=45&&i<50)||i>=92;doc.rect(x0+i*md,yt,(j-i)*md,hb+(g?hg:0),'F');i=j}else i++}
  const yd=yt+hb+1.6;doc.setFontSize(5.5);doc.text(c[0][0],x0-2.2,yd);doc.text(c[0].slice(1,7),x0+24*md,yd,{align:'center'});doc.text(c[0].slice(7),x0+71*md,yd,{align:'center'});
- doc.setFontSize(7);doc.text('S/.',ox+2,37.5);doc.setFontSize(12);doc.text(Number(c[7]).toFixed(2),ox+9,37.5)}
-function prDoc(){const {jsPDF}=window.jspdf,doc=new jsPDF({orientation:'landscape',unit:'mm',format:[99,40]});let n=0;
- PR.filter(p=>p.ok).forEach(p=>{for(let u=0;u<Math.max(0,Math.round(p.u));u++){if(n&&n%3===0)doc.addPage([99,40],'landscape');prEtq(doc,p.c,(n%3)*33);n++}});return doc}
+ doc.setFontSize(7);doc.text('S/.',mx,oy+33.5);doc.setFontSize(12);doc.text(Number(c[7]).toFixed(2),mx+7,oy+33.5)}
+function prDoc(){const {jsPDF}=window.jspdf,v=id=>+$(id).value||0,g={an:v('prAn')||33,al:v('prAl')||40,co:Math.max(1,Math.round(v('prCo'))||3),dx:v('prDx'),dy:v('prDy'),sv:v('prSv'),sh:v('prSh')},pg=[g.co*g.an+(g.co-1)*g.sh,g.al+g.sv],doc=new jsPDF({orientation:'landscape',unit:'mm',format:pg});let n=0;
+ PR.filter(p=>p.ok).forEach(p=>{for(let u=0;u<Math.max(0,Math.round(p.u));u++){if(n&&n%g.co===0)doc.addPage(pg,'landscape');prEtq(doc,p.c,(n%g.co)*(g.an+g.sh)+g.dx,g.dy,g.an);n++}});return doc}
 
 $('view-datos').insertAdjacentHTML('afterend',
  '<div id="view-lpns" class="hide space-y-6">'+busBox('ls','Etiqueta LPN Saga (104 × 64 mm)',bx('lsPdf','Etiquetas PDF')+bx('lsPrev','Vista previa')+bx('lsSave','Guardar cita y fecha en OC-TIENDA'))+'</div>'+
- '<div id="view-precio" class="hide space-y-6">'+busBox('pr','Etiqueta de precio (EAN-13, 33 × 40 mm, una por unidad)',`<button id="prPdf" type="button" disabled class="${dsBtn} disabled:opacity-40"><span id="prPdfT">PDF</span></button>`+bx('prPrev','Vista previa'))+'</div>');
+ '<div id="view-precio" class="hide space-y-6">'+busBox('pr','Etiqueta de precio (EAN-13, una por unidad)',pinp()+`<button id="prPdf" type="button" disabled class="${dsBtn} disabled:opacity-40"><span id="prPdfT">PDF</span></button>`+bx('prPrev','Vista previa'))+'</div>');
 $('lsBuscar').onclick=lsBuscar;$('prBuscar').onclick=prBuscar;
 $('lsPdf').onclick=()=>lsDoc().save('ETIQUETAS_LPN_SAGA_'+LS[0].orden+'.pdf');
 $('lsPrev').onclick=()=>window.open(lsDoc().output('bloburl'));$('lsSave').onclick=lsSave;
