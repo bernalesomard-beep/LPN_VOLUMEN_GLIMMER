@@ -158,7 +158,13 @@
         class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-t-lg border border-b-0 border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100 -mb-px">
         <i data-lucide="package-check" class="w-4 h-4"></i> Resumen de empaque
       </button>
+      <button id="tabDatos" type="button" role="tab" aria-selected="false"
+        class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-t-lg border border-b-0 border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100 -mb-px">
+        <i data-lucide="database" class="w-4 h-4"></i> Catálogo y OC-Tienda
+      </button>
     </nav>
+
+    <div id="view-datos" class="hide space-y-6"></div>
 
     <div id="view-division" class="space-y-8">
 
@@ -387,7 +393,7 @@
               <div class="opt-card h-full rounded-xl border border-slate-700 bg-slate-800/60 p-4 hover:border-slate-500 peer-checked:border-brand-500 peer-checked:bg-brand-700/15 peer-checked:ring-2 peer-checked:ring-brand-500/40 peer-focus-visible:ring-2 peer-focus-visible:ring-white/60">
                 <div class="flex items-start justify-between gap-2">
                   <span class="text-sm font-bold text-white leading-tight">Saga</span>
-                  <span class="shrink-0 px-1.5 py-0.5 rounded font-mono text-xs font-bold bg-slate-700 text-slate-200">SF</span>
+                  <span class="shrink-0 px-1.5 py-0.5 rounded font-mono text-xs font-bold bg-slate-700 text-slate-200">Saga</span>
                 </div>
                 <p class="mt-2 text-xs text-slate-400 leading-snug">Un código con lotes distintos no comparte LPN.</p>
               </div>
@@ -397,7 +403,7 @@
               <div class="opt-card h-full rounded-xl border border-slate-700 bg-slate-800/60 p-4 hover:border-slate-500 peer-checked:border-brand-500 peer-checked:bg-brand-700/15 peer-checked:ring-2 peer-checked:ring-brand-500/40 peer-focus-visible:ring-2 peer-focus-visible:ring-white/60">
                 <div class="flex items-start justify-between gap-2">
                   <span class="text-sm font-bold text-white leading-tight">Saga · Máx. 20 códigos</span>
-                  <span class="shrink-0 px-1.5 py-0.5 rounded font-mono text-xs font-bold bg-slate-700 text-slate-200">SF</span>
+                  <span class="shrink-0 px-1.5 py-0.5 rounded font-mono text-xs font-bold bg-slate-700 text-slate-200">Saga</span>
                 </div>
                 <p class="mt-2 text-xs text-slate-400 leading-snug">Reglas de Saga, máximo 20 códigos distintos por LPN y cada LPN ocupa solo hasta el 85% de la caja.</p>
               </div>
@@ -948,15 +954,15 @@ $('fPed').onchange=async e=>{const f=e.target.files[0];if(!f)return;
   }};
 
 // ---- Criterios por cliente y series de LPN ----
-const PREF={aruma_vol:'TA',aruma_cl:'TA',inretail:'IP',saga:'SF',saga20:'SF'};
+const PREF={aruma_vol:'TA',aruma_cl:'TA',inretail:'IP',saga:'20614043271',saga20:'20614043271'};
 const AYUDA={
   volumen:'Llena cada LPN hasta el volumen máximo. Prefijo y correlativo libres.',
   codlote:'Por código y lote: 1 LPN por caja master completa y un LPN de saldo. Prefijo y correlativo libres.',
   aruma_vol:'Aruma · por volumen. Serie TA000001.',
   aruma_cl:'Aruma · por código y lote (caja master). Serie TA000001.',
   inretail:'InRetail · por volumen. Un código con el mismo lote no se separa en cajas distintas, salvo cajas master. Serie IP000001.',
-  saga:'Saga · por volumen. Un código con lotes distintos no comparte caja. Serie SF000001.',
-  saga20:'Saga · mismas reglas de Saga (volumen, un código con lotes distintos no comparte caja) y máximo 20 códigos distintos por LPN. Cada LPN se llena como máximo al 85% del volumen de la caja. Serie SF000001.'
+  saga:'Saga · por volumen. Un código con lotes distintos no comparte caja. Serie 20614043271000001.',
+  saga20:'Saga · mismas reglas de Saga (volumen, un código con lotes distintos no comparte caja) y máximo 20 códigos distintos por LPN. Cada LPN se llena como máximo al 85% del volumen de la caja. Serie 20614043271000001.'
 };
 let LASTS={},PRE_LIBRE='',FIJO='';
 const modo=()=>(document.querySelector('input[name="metodo"]:checked')||{}).value||'volumen';
@@ -1362,7 +1368,7 @@ function pdf(L,nombre,preview){
       foot:[['','','','','','','','Total Cantidad del Pedido',f2(TP),'',f2(TC),f2(TS)]],showFoot:'lastPage',
       styles:{fontSize:8,cellPadding:{top:3,bottom:3,left:3,right:3},overflow:'ellipsize'},
       headStyles:{fontStyle:'normal'},footStyles:{fontStyle:'normal',fillColor:false,textColor:0},
-      columnStyles:{0:{cellWidth:46,fontStyle:'bold'},1:{cellWidth:26},2:{cellWidth:50},3:{cellWidth:76},4:{cellWidth:178},5:{cellWidth:74},6:{cellWidth:58},7:{cellWidth:46},8:{cellWidth:62,halign:'right'},9:{cellWidth:46,halign:'right'},10:{cellWidth:42,halign:'right'},11:{cellWidth:48,halign:'right'}},
+      columnStyles:{0:{cellWidth:82,fontStyle:'bold'},1:{cellWidth:26},2:{cellWidth:50},3:{cellWidth:62},4:{cellWidth:162},5:{cellWidth:68},6:{cellWidth:58},7:{cellWidth:46},8:{cellWidth:62,halign:'right'},9:{cellWidth:46,halign:'right'},10:{cellWidth:42,halign:'right'},11:{cellWidth:48,halign:'right'}},
       didDrawPage:cabecera});
   });
   const total={};pages.forEach(p=>{total[p.k]=(total[p.k]||0)+1});const cnt={};
@@ -1930,8 +1936,50 @@ async function guardarHistorico(){
 }
 
 $('bCalc').onclick=calcular;$('bPdf').onclick=()=>pdf();$('bXls').onclick=xls;$('bDet').onclick=detalle;$('bEmp').onclick=resumenEmpaque;$('bPla').onclick=plantilla;$('bHis').onclick=guardarHistorico;
+
+// ---- Catálogo y OC-Tienda (hojas CATALOGO y OC-TIENDA del Sheet) ----
+const DS={
+ catalogo:{t:'Catálogo de productos',cols:['Ean ID','Sku ID','Nombre','Marca','Modelo','Linea ID','Sublinea ID','Precio unitario'],ed:[],rows:[]},
+ oc:{t:'OC - Tienda (ID de cita y fecha de entrega editables)',cols:['ORDEN DE COMPRA','DOCUMENTO','COD TIENDA','TIENDA DESTINO','ID DE CITA','FECHA DE ENTREGA'],ed:[4,5],rows:[]}
+};
+const dsBtn='px-3 py-2 text-sm font-semibold rounded-lg border border-slate-200 hover:bg-slate-100';
+function dsBox(k){return `<section class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4">
+<div class="flex flex-wrap items-center gap-3 justify-between"><h3 class="font-bold text-slate-900">${DS[k].t}</h3><div class="flex flex-wrap gap-2">
+<button id="ds${k}Cargar" type="button" class="${dsBtn}">Cargar del Sheet</button>
+<label class="${dsBtn} cursor-pointer">Subir Excel<input id="ds${k}File" type="file" accept=".xlsx,.xls,.csv" class="hide"></label>
+<button id="ds${k}Sube" type="button" class="px-3 py-2 text-sm font-semibold rounded-lg bg-slate-900 text-white disabled:opacity-40" disabled>Guardar en el Sheet</button></div></div>
+<input id="ds${k}Q" placeholder="Buscar..." class="w-full sm:w-72 border border-slate-200 rounded-lg px-3 py-2 text-sm">
+<p id="ds${k}St" class="text-xs text-slate-500"></p><div id="ds${k}T" class="overflow-x-auto"></div></section>`}
+function dsRender(k){const d=DS[k],q=$('ds'+k+'Q').value.trim().toLowerCase();let n=0;
+ let h='<table class="w-full text-xs"><thead><tr>'+d.cols.map(c=>`<th class="text-left py-2 px-2 text-slate-500">${c}</th>`).join('')+'</tr></thead><tbody>';
+ d.rows.forEach((r,i)=>{if(q&&!r.join(' ').toLowerCase().includes(q))return;if(n++>=100)return;
+  h+='<tr class="border-t border-slate-100">'+r.map((v,j)=>d.ed.includes(j)?`<td class="px-1"><input data-k="${k}" data-i="${i}" data-j="${j}" value="${esc(v)}" class="dsin border border-slate-300 rounded px-2 py-1 w-36"></td>`:`<td class="py-1.5 px-2">${esc(v)}</td>`).join('')+'</tr>'});
+ $('ds'+k+'T').innerHTML=h+'</tbody></table>';
+ $('ds'+k+'St').textContent=d.rows.length+' filas'+(n>100?' · se muestran 100, usa el buscador':'')}
+function dsMsg(k,t,err){const e=$('ds'+k+'St');e.textContent=t;e.className='text-xs '+(err?'text-rose-600':'text-slate-500')}
+async function dsCargar(k){dsMsg(k,'Consultando el Sheet...');
+ try{const j=await (await fetch(APPS_URL+'?action='+k+'&t='+Date.now(),{cache:'no-store'})).json();
+  if(!j.ok)throw new Error(j.error||'respuesta inválida');DS[k].rows=j.rows;$('ds'+k+'Sube').disabled=true;dsRender(k)}
+ catch(e){dsMsg(k,'No se pudo cargar: '+e.message+' (¿publicaste la nueva versión del script?)',true)}}
+async function dsArchivo(k,f){if(!f)return;const d=DS[k];
+ try{const wb=XLSX.read(await f.arrayBuffer(),{type:'array'}),ws=wb.Sheets[wb.SheetNames[0]];
+  const filas=XLSX.utils.sheet_to_json(ws,{defval:'',raw:false});
+  d.rows=filas.map(o=>d.cols.map(c=>{const m=Object.keys(o).find(x=>x.trim().toLowerCase()===c.toLowerCase());let v=m===undefined?'':String(o[m]).trim();
+   if(c==='Precio unitario'&&v!==''&&!isNaN(parseFloat(v)))v=(Math.round(parseFloat(v)*100)/100).toFixed(2);return v})).filter(r=>r[0]!=='');
+  $('ds'+k+'Sube').disabled=!d.rows.length;dsRender(k);dsMsg(k,d.rows.length+' filas leídas de '+f.name+'. Revisa y pulsa "Guardar en el Sheet".')}
+ catch(e){dsMsg(k,'No se pudo leer el archivo: '+e.message,true)}}
+async function dsSube(k){const d=DS[k];$('ds'+k+'Sube').disabled=true;dsMsg(k,'Guardando...');
+ try{const j=await (await fetch(APPS_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'upsert',hoja:k,rows:d.rows})})).json();
+  if(!j.ok)throw new Error(j.error);dsMsg(k,'Guardado: '+j.nuevos+' nuevos, '+j.actualizados+' actualizados.')}
+ catch(e){$('ds'+k+'Sube').disabled=false;dsMsg(k,'No se pudo guardar: '+e.message,true)}}
+$('view-datos').innerHTML=dsBox('catalogo')+dsBox('oc');
+Object.keys(DS).forEach(k=>{$('ds'+k+'Cargar').onclick=()=>dsCargar(k);$('ds'+k+'File').onchange=e=>dsArchivo(k,e.target.files[0]);
+ $('ds'+k+'Sube').onclick=()=>dsSube(k);$('ds'+k+'Q').oninput=()=>dsRender(k)});
+$('view-datos').addEventListener('input',e=>{const t=e.target;if(!t.classList.contains('dsin'))return;DS[t.dataset.k].rows[+t.dataset.i][+t.dataset.j]=t.value;$('ds'+t.dataset.k+'Sube').disabled=false});
+$('tabDatos').onclick=()=>{showTab('datos');if(APPS_URL&&!DS.oc.rows.length&&!DS.catalogo.rows.length){dsCargar('catalogo');dsCargar('oc')}};
+
 function showTab(t){
-  const T=[['tabDivision','division','view-division',null],['tabRegenerar','regenerar','view-regenerar','regDesde'],['tabEtiquetas','etiquetas','view-etiquetas','etqDesde'],['tabImd','imd','view-imd','imdDesde'],['tabDetalle','detalle','view-det','detDesde'],['tabEmpaque','empaque','view-emp','empDesde']];
+  const T=[['tabDivision','division','view-division',null],['tabRegenerar','regenerar','view-regenerar','regDesde'],['tabEtiquetas','etiquetas','view-etiquetas','etqDesde'],['tabImd','imd','view-imd','imdDesde'],['tabDetalle','detalle','view-det','detDesde'],['tabEmpaque','empaque','view-emp','empDesde'],['tabDatos','datos','view-datos',null]];
   const on='border-slate-200 bg-white text-slate-900',off='border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100';
   T.forEach(([id,k,vw,foco])=>{
     const act=k===t;$(vw).classList.toggle('hide',!act);
