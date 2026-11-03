@@ -158,6 +158,8 @@
         class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-t-lg border border-b-0 border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100 -mb-px">
         <i data-lucide="package-check" class="w-4 h-4"></i> Resumen de empaque
       </button>
+      <button id="tabLpnS" type="button" role="tab" aria-selected="false" class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-t-lg border border-b-0 border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100 -mb-px"><i data-lucide="tag" class="w-4 h-4"></i> LPN Saga</button>
+      <button id="tabPrecio" type="button" role="tab" aria-selected="false" class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-t-lg border border-b-0 border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100 -mb-px"><i data-lucide="receipt" class="w-4 h-4"></i> Etiqueta de precio</button>
       <button id="tabDatos" type="button" role="tab" aria-selected="false"
         class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-t-lg border border-b-0 border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100 -mb-px">
         <i data-lucide="database" class="w-4 h-4"></i> Catálogo y OC-Tienda
@@ -1978,8 +1980,99 @@ Object.keys(DS).forEach(k=>{$('ds'+k+'Cargar').onclick=()=>dsCargar(k);$('ds'+k+
 $('view-datos').addEventListener('input',e=>{const t=e.target;if(!t.classList.contains('dsin'))return;DS[t.dataset.k].rows[+t.dataset.i][+t.dataset.j]=t.value;$('ds'+t.dataset.k+'Sube').disabled=false});
 $('tabDatos').onclick=()=>{showTab('datos');if(APPS_URL&&!DS.oc.rows.length&&!DS.catalogo.rows.length){dsCargar('catalogo');dsCargar('oc')}};
 
+
+// ---- Etiqueta LPN Saga y Etiqueta de precio ----
+const MAPA={oc:'PEDIDO',tienda:'HSHIP'}; // columnas del histórico que equivalen a ORDEN DE COMPRA y COD TIENDA de OC-TIENDA
+let LS=[],GR={},PR=[];
+const q2=async a=>{const j=await (await fetch(APPS_URL+'?action='+a+'&t='+Date.now(),{cache:'no-store'})).json();if(!j.ok)throw new Error(j.error||'respuesta inválida');return j};
+const inpC='border border-slate-200 rounded-lg px-3 py-2 text-sm w-32';
+function busBox(p,t,extra){return `<section class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4"><h3 class="font-bold text-slate-900">${t}</h3>
+<div class="flex flex-wrap gap-2 items-center"><select id="${p}Campo" class="border border-slate-200 rounded-lg px-3 py-2 text-sm">${$('etqCampo').innerHTML}</select>
+<input id="${p}Desde" placeholder="Desde" class="${inpC}"><input id="${p}Hasta" placeholder="Hasta" class="${inpC}">
+<button id="${p}Buscar" type="button" class="px-3 py-2 text-sm font-semibold rounded-lg bg-slate-900 text-white">Buscar</button>${extra}</div>
+<p id="${p}St" class="text-xs text-slate-500"></p><div id="${p}T" class="overflow-x-auto"></div></section>`}
+const bx=(id,t)=>`<button id="${id}" type="button" disabled class="${dsBtn} disabled:opacity-40">${t}</button>`;
+function stMsg(p,t,err){const e=$(p+'St');e.textContent=t;e.className='text-xs '+(err?'text-rose-600 font-semibold':'text-slate-500')}
+async function bajar(p){const c=$(p+'Campo').value,d=$(p+'Desde').value.trim(),h=$(p+'Hasta').value.trim()||d;
+ if(!d||isNaN(+d)||isNaN(+h))throw new Error('Escribe un número válido en Desde (y Hasta si es rango).');
+ const [j,ca]=await Promise.all([q2('historico&campo='+encodeURIComponent(c)+'&desde='+encodeURIComponent(d)+'&hasta='+encodeURIComponent(h)),q2('catalogo')]);
+ if(!j.rows.length)throw new Error('No se encontraron pedidos en ese rango.');
+ const idx={};ca.rows.forEach(r=>{idx[r[0]]=r;idx[r[1]]=r});return {L:reconstruir(j.header,j.rows),idx}}
+
+// --- LPN Saga ---
+async function lsBuscar(){stMsg('ls','Consultando...');
+ try{const [{L,idx},oc]=await Promise.all([bajar('ls'),q2('oc')]);LS=L;GR={};
+  L.forEach(l=>{const hd=l.head,o=String(hd[MAPA.oc]||'').trim(),t=String(hd[MAPA.tienda]||'').trim(),k=o+'|'+t,c=idx[String(hd['COD.EAN']||'').trim()]||idx[l.lines[0].code];
+   l.k=k;l.linea=c?c[5]:'';
+   if(!GR[k]){const m=oc.rows.filter(r=>r[0]===o),f=m.find(r=>r[2]===t)||(m.length===1?m[0]:[]);GR[k]={o,t:f[2]||t,doc:f[1]||'',cita:f[4]||'',fecha:f[5]||'',n:0}}GR[k].n++});
+  lsRender();stMsg('ls',L.length+' LPN en '+Object.keys(GR).length+' grupo(s) OC/tienda. Completa ID de cita y fecha (ej. 30-Ago).')}
+ catch(e){stMsg('ls','Error: '+e.message,true)}}
+function lsRender(){$('lsT').innerHTML='<table class="w-full text-xs"><thead><tr>'+['O/C','Local','ID de cita','Fecha de entrega','LPN'].map(c=>`<th class="text-left py-2 px-2 text-slate-500">${c}</th>`).join('')+'</tr></thead><tbody>'+
+ Object.keys(GR).map(k=>{const g=GR[k];return `<tr class="border-t border-slate-100"><td class="px-2 py-1.5 font-mono">${esc(g.o)}</td>`+['t','cita','fecha'].map(f=>`<td class="px-1"><input data-g="${esc(k)}" data-f="${f}" value="${esc(g[f])}" class="lsin border border-slate-300 rounded px-2 py-1 w-32"></td>`).join('')+`<td class="px-2">${g.n}</td></tr>`}).join('')+'</tbody></table>';
+ ['lsPdf','lsPrev','lsSave'].forEach(i=>$(i).disabled=false)}
+function lsEtq(doc,l,mod){const W=104,mx=5,X0=mx+38,g=GR[l.k],hd=l.head;
+ doc.setTextColor(0);doc.setDrawColor(0);doc.setLineWidth(0.25);doc.setFont('helvetica','bold');
+ const fila=(y,rot,val)=>{doc.setFontSize(10.5);doc.text(rot,mx,y);doc.line(X0,y+1,W-mx,y+1);let fs=12;doc.setFontSize(fs);val=String(val);
+  while(fs>7&&doc.getTextWidth(val)>W-mx-X0-2){fs-=.5;doc.setFontSize(fs)}doc.text(val,(X0+W-mx)/2,y,{align:'center'})};
+ [['O/C',g.o],['Local',g.t],['Línea',l.linea],['ID de Cita',g.cita],['Fecha de Entrega',g.fecha]].forEach((f,i)=>fila(7+i*6.3,f[0],f[1]));
+ const y=7+5*6.3;doc.setFontSize(10.5);doc.text('Bulto',mx,y);doc.line(X0,y+1,X0+20,y+1);doc.text(String(hd.CAJA||''),X0+10,y,{align:'center'});
+ doc.text('de',X0+24,y);doc.line(X0+31,y+1,W-mx,y+1);doc.text(String(hd.TOTAL_CAJAS||''),(X0+31+W-mx)/2,y,{align:'center'});
+ const b=code128(l.lpn),m=b.reduce((a,c)=>a+c,0),md=Math.min(mod,(W-2*mx)/m);let x=(W-m*md)/2;
+ b.forEach((a,i)=>{if(i%2===0)doc.rect(x,y+4,a*md,10,'F');x+=a*md});
+ doc.setFontSize(16);doc.text(String(l.lpn),W/2,y+22,{align:'center'})}
+function lsDoc(){const {jsPDF}=window.jspdf,doc=new jsPDF({orientation:'landscape',unit:'mm',format:[104,64]}),mod=parseFloat($('etqMod').value)||0.5;
+ LS.forEach((l,i)=>{if(i)doc.addPage([104,64],'landscape');lsEtq(doc,l,mod)});return doc}
+async function lsSave(){const rows=Object.values(GR).filter(g=>g.o&&g.t&&(g.cita||g.fecha)).map(g=>[g.o,g.doc,g.t,'',g.cita,g.fecha]);
+ if(!rows.length){stMsg('ls','Nada que guardar: falta O/C, Local, ID de cita o fecha.',true);return}
+ try{const j=await (await fetch(APPS_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'upsert',hoja:'oc',rows})})).json();
+  if(!j.ok)throw new Error(j.error);stMsg('ls','Guardado en OC-TIENDA: '+j.nuevos+' nuevos, '+j.actualizados+' actualizados.')}
+ catch(e){stMsg('ls','No se pudo guardar: '+e.message,true)}}
+
+// --- Etiqueta de precio (EAN-13, 33x40 mm, 3 por fila, una por unidad) ---
+function ean13(c){
+ const L=['0001101','0011001','0010011','0111101','0100011','0110001','0101111','0111011','0110111','0001011'],
+ G=['0100111','0110011','0011011','0100001','0011101','0111001','0000101','0010001','0001001','0010111'],
+ R=L.map(x=>x.replace(/[01]/g,b=>b==='0'?'1':'0')),P=['LLLLLL','LLGLGG','LLGGLG','LLGGGL','LGLLGG','LGGLLG','LGGGLL','LGLGLG','LGLGGL','LGGLGL'];
+ const d=c.split('').map(Number),p=P[d[0]];let s='101';
+ for(let i=1;i<7;i++)s+=(p[i-1]==='L'?L:G)[d[i]];s+='01010';for(let i=7;i<13;i++)s+=R[d[i]];
+ return s+'101'}
+async function prBuscar(){stMsg('pr','Consultando...');
+ try{const {L,idx}=await bajar('pr'),A={};
+  L.forEach(l=>l.lines.forEach(x=>{const e=String(x.r['COD.EAN']||'').trim(),c=idx[e]||idx[x.code],k=c?c[0]:(e||x.code);
+   if(!A[k])A[k]={code:x.code,c,u:0};A[k].u+=x.units}));
+  PR=Object.values(A).map(p=>({...p,ok:!!p.c&&/^\d{13}$/.test(p.c[0])}));prRender()}
+ catch(e){stMsg('pr','Error: '+e.message,true)}}
+function prTot(){return PR.filter(p=>p.ok).reduce((a,p)=>a+Math.max(0,Math.round(p.u)),0)}
+function prRender(){$('prT').innerHTML='<table class="w-full text-xs"><thead><tr>'+['Código','Nombre','Marca','Modelo','Sublínea','EAN','Precio','Unidades'].map(c=>`<th class="text-left py-2 px-2 text-slate-500">${c}</th>`).join('')+'</tr></thead><tbody>'+
+ PR.map((p,i)=>{const c=p.c||[];return `<tr class="border-t border-slate-100 ${p.ok?'':'bg-rose-50'}"><td class="px-2 py-1.5 font-mono">${esc(p.code)}</td>`+(p.c?[2,3,4,6,0,7].map(j=>`<td class="px-2">${esc(j===7?Number(c[j]).toFixed(2):c[j])}</td>`).join(''):`<td colspan="6" class="px-2 text-rose-600">No está en el catálogo</td>`)+
+ `<td class="px-1"><input data-i="${i}" type="number" min="0" value="${Math.round(p.u)}" class="prin border border-slate-300 rounded px-2 py-1 w-20"></td></tr>`}).join('')+'</tbody></table>';
+ prCuenta()}
+function prCuenta(){const n=prTot(),sin=PR.filter(p=>!p.ok).length;$('prPdfT').textContent='PDF ('+n+' etiquetas)';$('prPdf').disabled=$('prPrev').disabled=!n;
+ stMsg('pr',PR.length+' productos · '+n+' etiquetas'+(sin?' · '+sin+' sin catálogo o EAN inválido (no se imprimen)':''),!!sin)}
+function prEtq(doc,c,ox){doc.setTextColor(0);doc.setFont('helvetica','bold');doc.setFontSize(6);
+ doc.splitTextToSize(String(c[2]),29).slice(0,2).forEach((t,i)=>doc.text(t,ox+2,3.5+i*2.6));
+ doc.text(String(c[3]),ox+2,9);doc.text(String(c[4]),ox+2,11.8);doc.setFontSize(12);doc.text(String(c[6]),ox+2,17);
+ const s=ean13(c[0]),md=0.25,x0=ox+(33-95*md)/2+1;let i=0;
+ while(i<95){if(s[i]==='1'){let j=i;while(j<95&&s[j]==='1')j++;doc.rect(x0+i*md,19.5,(j-i)*md,11,'F');i=j}else i++}
+ doc.setFontSize(6);doc.text(c[0][0],x0-1.8,33.5);doc.text(c[0].slice(1,7),x0+24*md,33.5,{align:'center'});doc.text(c[0].slice(7),x0+71*md,33.5,{align:'center'});
+ doc.setFontSize(7);doc.text('S/.',ox+2,38);doc.setFontSize(12);doc.text(Number(c[7]).toFixed(2),ox+9,38)}
+function prDoc(){const {jsPDF}=window.jspdf,doc=new jsPDF({orientation:'landscape',unit:'mm',format:[99,40]});let n=0;
+ PR.filter(p=>p.ok).forEach(p=>{for(let u=0;u<Math.max(0,Math.round(p.u));u++){if(n&&n%3===0)doc.addPage([99,40],'landscape');prEtq(doc,p.c,(n%3)*33);n++}});return doc}
+
+$('view-datos').insertAdjacentHTML('afterend',
+ '<div id="view-lpns" class="hide space-y-6">'+busBox('ls','Etiqueta LPN Saga (104 × 64 mm)',bx('lsPdf','Etiquetas PDF')+bx('lsPrev','Vista previa')+bx('lsSave','Guardar cita y fecha en OC-TIENDA'))+'</div>'+
+ '<div id="view-precio" class="hide space-y-6">'+busBox('pr','Etiqueta de precio (EAN-13, 33 × 40 mm, una por unidad)',`<button id="prPdf" type="button" disabled class="${dsBtn} disabled:opacity-40"><span id="prPdfT">PDF</span></button>`+bx('prPrev','Vista previa'))+'</div>');
+$('lsBuscar').onclick=lsBuscar;$('prBuscar').onclick=prBuscar;
+$('lsPdf').onclick=()=>lsDoc().save('ETIQUETAS_LPN_SAGA_'+LS[0].orden+'.pdf');
+$('lsPrev').onclick=()=>window.open(lsDoc().output('bloburl'));$('lsSave').onclick=lsSave;
+$('prPdf').onclick=()=>prDoc().save('ETIQUETAS_PRECIO_'+$('prDesde').value.trim()+'.pdf');
+$('prPrev').onclick=()=>window.open(prDoc().output('bloburl'));
+$('view-lpns').addEventListener('input',e=>{const t=e.target;if(t.classList.contains('lsin'))GR[t.dataset.g][t.dataset.f]=t.value});
+$('view-precio').addEventListener('input',e=>{const t=e.target;if(t.classList.contains('prin')){PR[+t.dataset.i].u=+t.value||0;prCuenta()}});
+$('tabLpnS').onclick=()=>showTab('lpns');$('tabPrecio').onclick=()=>showTab('precio');
+
 function showTab(t){
-  const T=[['tabDivision','division','view-division',null],['tabRegenerar','regenerar','view-regenerar','regDesde'],['tabEtiquetas','etiquetas','view-etiquetas','etqDesde'],['tabImd','imd','view-imd','imdDesde'],['tabDetalle','detalle','view-det','detDesde'],['tabEmpaque','empaque','view-emp','empDesde'],['tabDatos','datos','view-datos',null]];
+  const T=[['tabDivision','division','view-division',null],['tabRegenerar','regenerar','view-regenerar','regDesde'],['tabEtiquetas','etiquetas','view-etiquetas','etqDesde'],['tabImd','imd','view-imd','imdDesde'],['tabDetalle','detalle','view-det','detDesde'],['tabEmpaque','empaque','view-emp','empDesde'],['tabDatos','datos','view-datos',null],['tabLpnS','lpns','view-lpns','lsDesde'],['tabPrecio','precio','view-precio','prDesde']];
   const on='border-slate-200 bg-white text-slate-900',off='border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100';
   T.forEach(([id,k,vw,foco])=>{
     const act=k===t;$(vw).classList.toggle('hide',!act);
