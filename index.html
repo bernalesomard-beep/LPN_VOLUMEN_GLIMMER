@@ -158,11 +158,9 @@
         class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-t-lg border border-b-0 border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100 -mb-px">
         <i data-lucide="package-check" class="w-4 h-4"></i> Resumen de empaque
       </button>
-      <button id="tabLpnS" type="button" role="tab" aria-selected="false" class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-t-lg border border-b-0 border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100 -mb-px"><i data-lucide="tag" class="w-4 h-4"></i> LPN Saga</button>
-      <button id="tabPrecio" type="button" role="tab" aria-selected="false" class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-t-lg border border-b-0 border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100 -mb-px"><i data-lucide="receipt" class="w-4 h-4"></i> Etiqueta de precio</button>
-      <button id="tabDatos" type="button" role="tab" aria-selected="false"
+      <button id="tabSaga" type="button" role="tab" aria-selected="false"
         class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-t-lg border border-b-0 border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100 -mb-px">
-        <i data-lucide="database" class="w-4 h-4"></i> Catálogo y OC-Tienda
+        <i data-lucide="folder" class="w-4 h-4"></i> Archivos Saga
       </button>
     </nav>
 
@@ -408,6 +406,16 @@
                   <span class="shrink-0 px-1.5 py-0.5 rounded font-mono text-xs font-bold bg-slate-700 text-slate-200">Saga</span>
                 </div>
                 <p class="mt-2 text-xs text-slate-400 leading-snug">Reglas de Saga, máximo 20 códigos distintos por LPN y cada LPN ocupa solo hasta el 85% de la caja.</p>
+              </div>
+            </label>
+            <label class="relative block cursor-pointer">
+              <input type="radio" name="metodo" value="ripley12" class="peer sr-only">
+              <div class="opt-card h-full rounded-xl border border-slate-700 bg-slate-800/60 p-4 hover:border-slate-500 peer-checked:border-brand-500 peer-checked:bg-brand-700/15 peer-checked:ring-2 peer-checked:ring-brand-500/40 peer-focus-visible:ring-2 peer-focus-visible:ring-white/60">
+                <div class="flex items-start justify-between gap-2">
+                  <span class="text-sm font-bold text-white leading-tight">Ripley · Máx. 12 códigos</span>
+                  <span class="shrink-0 px-1.5 py-0.5 rounded font-mono text-xs font-bold bg-slate-700 text-slate-200">Ripley</span>
+                </div>
+                <p class="mt-2 text-xs text-slate-400 leading-snug">Reglas de Saga, máximo 12 códigos distintos por LPN y cada LPN hasta el 85% de la caja. Prefijo + Id LPN + correlativo de 6 dígitos.</p>
               </div>
             </label>
           </div>
@@ -956,6 +964,8 @@ $('fPed').onchange=async e=>{const f=e.target.files[0];if(!f)return;
   }};
 
 // ---- Criterios por cliente y series de LPN ----
+const DIN={ripley12:1}; // criterios con prefijo escrito a mano (prefijo + Id LPN, ej. NC0019027); su serie se guarda por ese prefijo
+const dinPre=()=>$('pre').value.trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
 const PREF={aruma_vol:'TA',aruma_cl:'TA',inretail:'IP',saga:'20614043271',saga20:'20614043271'};
 const AYUDA={
   volumen:'Llena cada LPN hasta el volumen máximo. Prefijo y correlativo libres.',
@@ -964,6 +974,7 @@ const AYUDA={
   aruma_cl:'Aruma · por código y lote (caja master). Serie TA000001.',
   inretail:'InRetail · por volumen. Un código con el mismo lote no se separa en cajas distintas, salvo cajas master. Serie IP000001.',
   saga:'Saga · por volumen. Un código con lotes distintos no comparte caja. Serie 20614043271000001.',
+  ripley12:'Ripley · mismas reglas de Saga con máximo 12 códigos distintos por LPN (cada LPN hasta el 85% del volumen de la caja). Escribe el prefijo + Id LPN (ej. NC0019027); el correlativo de 6 dígitos parte de 1 para cada Id LPN nuevo. LPN final: NC0019027000001.',
   saga20:'Saga · mismas reglas de Saga (volumen, un código con lotes distintos no comparte caja) y máximo 20 códigos distintos por LPN. Cada LPN se llena como máximo al 85% del volumen de la caja. Serie 20614043271000001.'
 };
 let LASTS={},PRE_LIBRE='',FIJO='';
@@ -971,15 +982,17 @@ const modo=()=>(document.querySelector('input[name="metodo"]:checked')||{}).valu
 function memSer(){try{return JSON.parse(localStorage.getItem('lpn_series')||'{}')}catch(e){return {}}}
 function ultSerie(p){const m=memSer()[p];return Math.max(Number(LASTS[p])||0,m?Number(m.ultimo)||0:0)}
 function aplicarModo(){
-  const m=modo(),p=PREF[m];
-  $('boxMaster').classList.toggle('hide',!(m==='inretail'||m==='saga'||m==='saga20'));
+  const m=modo(),dyn=!!DIN[m];
+  if(dyn&&$('pre').disabled){$('pre').value='';$('pre').disabled=false}
+  const p=PREF[m]||(dyn?dinPre():'');
+  $('boxMaster').classList.toggle('hide',!(m==='inretail'||m==='saga'||m==='saga20'||m==='ripley12'));
   $('metodoAyuda').textContent=AYUDA[m]||'';
   if(p){
-    if(!$('pre').disabled)PRE_LIBRE=$('pre').value;
-    $('pre').value=p;$('pre').disabled=true;
+    if(!dyn){if(!$('pre').disabled)PRE_LIBRE=$('pre').value;
+    $('pre').value=p;$('pre').disabled=true}
     const u=ultSerie(p);$('ini').value=u+1;
     $('stCfg').innerHTML='Serie <strong class="text-brand-700 font-bold">'+p+'</strong> · Último LPN: <strong class="text-slate-800 font-bold">'+p+String(u).padStart(6,'0')+'</strong> · Siguiente: <strong class="text-brand-700 font-bold">'+p+String(u+1).padStart(6,'0')+'</strong>';
-  }else{
+  }else if(dyn){$('ini').value=1;$('stCfg').textContent='Escribe el prefijo + Id LPN de Ripley (ej. NC0019027) para ver su serie.'}else{
     const venia=$('pre').disabled;
     if(venia){$('pre').value=PRE_LIBRE;$('pre').disabled=false}
     if(CFG.ok){
@@ -989,6 +1002,7 @@ function aplicarModo(){
   }
 }
 document.querySelectorAll('input[name="metodo"]').forEach(x=>{x.onchange=aplicarModo});
+$('pre').addEventListener('input',()=>{if(DIN[modo()])aplicarModo()});
 
 function refresh(){
   const canCalc = PED.length>0 && Object.keys(VOL).length>0;
@@ -996,11 +1010,12 @@ function refresh(){
 }
 
 function calcular(){
-  const m0=modo(),fijo=PREF[m0]||'';
+  const m0=modo(),fijo=PREF[m0]||(DIN[m0]?dinPre():'');
+  if(DIN[m0]&&!fijo){alert('Escribe el prefijo + Id LPN de Ripley (ej. NC0019027).');return}
   const cap=num($('cap').value),pre=fijo||$('pre').value.trim(),E=1e-9;
-  const metodo=(m0==='codlote'||m0==='aruma_cl')?'codlote':(m0==='inretail')?'inretail':(m0==='saga'||m0==='saga20')?'saga':'volumen';
-  const maxCod=m0==='saga20'?20:0;
-  const capL=m0==='saga20'?cap*0.85:cap; // Saga 20: cada LPN se llena como máximo al 85% de la caja
+  const metodo=(m0==='codlote'||m0==='aruma_cl')?'codlote':(m0==='inretail')?'inretail':(m0==='saga'||m0==='saga20'||m0==='ripley12')?'saga':'volumen';
+  const maxCod=m0==='saga20'?20:m0==='ripley12'?12:0;
+  const capL=(m0==='saga20'||m0==='ripley12')?cap*0.85:cap; // Saga 20: cada LPN se llena como máximo al 85% de la caja
   let ini=Math.max(1,parseInt($('ini').value)||1);
   LPNS=[];ERR=[];
   FIJO=fijo;PREUSO=pre;
@@ -1978,7 +1993,7 @@ $('view-datos').innerHTML=dsBox('catalogo')+dsBox('oc');
 Object.keys(DS).forEach(k=>{$('ds'+k+'Cargar').onclick=()=>dsCargar(k);$('ds'+k+'File').onchange=e=>dsArchivo(k,e.target.files[0]);
  $('ds'+k+'Sube').onclick=()=>dsSube(k);$('ds'+k+'Q').oninput=()=>dsRender(k)});
 $('view-datos').addEventListener('input',e=>{const t=e.target;if(!t.classList.contains('dsin'))return;DS[t.dataset.k].rows[+t.dataset.i][+t.dataset.j]=t.value;$('ds'+t.dataset.k+'Sube').disabled=false});
-$('tabDatos').onclick=()=>{showTab('datos');if(APPS_URL&&!DS.oc.rows.length&&!DS.catalogo.rows.length){dsCargar('catalogo');dsCargar('oc')}};
+$('tabSaga').onclick=()=>showTab('saga');
 
 
 // ---- Etiqueta LPN Saga y Etiqueta de precio ----
@@ -2076,10 +2091,19 @@ $('prPdf').onclick=()=>prDoc().save('ETIQUETAS_PRECIO_'+$('prDesde').value.trim(
 $('prPrev').onclick=()=>window.open(prDoc().output('bloburl'));
 $('view-lpns').addEventListener('input',e=>{const t=e.target;if(t.classList.contains('lsin'))GR[t.dataset.g][t.dataset.f]=t.value});
 $('view-precio').addEventListener('input',e=>{const t=e.target;if(t.classList.contains('prin')){PR[+t.dataset.i].u=+t.value||0;prCuenta()}});
-$('tabLpnS').onclick=()=>showTab('lpns');$('tabPrecio').onclick=()=>showTab('precio');
 
+
+// ---- Archivos Saga: una pestaña con subpestañas ----
+(function(){const subs=[['view-lpns','LPN Saga'],['view-datos','Catálogo y OC-Tienda'],['view-precio','Etiqueta de precio']];
+ const v=document.createElement('div');v.id='view-saga';v.className='hide space-y-6';
+ v.innerHTML='<div class="flex flex-wrap gap-2">'+subs.map(x=>`<button type="button" data-sub="${x[0]}" class="sub-btn px-4 py-2 text-sm font-semibold rounded-lg border">${x[1]}</button>`).join('')+'</div>';
+ $('view-datos').before(v);subs.forEach(x=>v.appendChild($(x[0])));
+ const sel=id=>{subs.forEach(x=>$(x[0]).classList.toggle('hide',x[0]!==id));
+  v.querySelectorAll('.sub-btn').forEach(b=>{b.className='sub-btn px-4 py-2 text-sm font-semibold rounded-lg border '+(b.dataset.sub===id?'bg-slate-900 text-white border-slate-900':'border-slate-200 text-slate-600 hover:bg-slate-100')})};
+ v.querySelectorAll('.sub-btn').forEach(b=>b.onclick=()=>{sel(b.dataset.sub);if(b.dataset.sub==='view-datos'&&APPS_URL&&!DS.oc.rows.length&&!DS.catalogo.rows.length){dsCargar('catalogo');dsCargar('oc')}});
+ sel('view-lpns')})();
 function showTab(t){
-  const T=[['tabDivision','division','view-division',null],['tabRegenerar','regenerar','view-regenerar','regDesde'],['tabEtiquetas','etiquetas','view-etiquetas','etqDesde'],['tabImd','imd','view-imd','imdDesde'],['tabDetalle','detalle','view-det','detDesde'],['tabEmpaque','empaque','view-emp','empDesde'],['tabDatos','datos','view-datos',null],['tabLpnS','lpns','view-lpns','lsDesde'],['tabPrecio','precio','view-precio','prDesde']];
+  const T=[['tabDivision','division','view-division',null],['tabRegenerar','regenerar','view-regenerar','regDesde'],['tabEtiquetas','etiquetas','view-etiquetas','etqDesde'],['tabImd','imd','view-imd','imdDesde'],['tabDetalle','detalle','view-det','detDesde'],['tabEmpaque','empaque','view-emp','empDesde'],['tabSaga','saga','view-saga',null]];
   const on='border-slate-200 bg-white text-slate-900',off='border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100';
   T.forEach(([id,k,vw,foco])=>{
     const act=k===t;$(vw).classList.toggle('hide',!act);
