@@ -138,30 +138,12 @@
         class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-t-lg border border-b-0 border-slate-200 bg-white text-slate-900 -mb-px">
         <i data-lucide="layers" class="w-4 h-4"></i> División de pedido
       </button>
-      <button id="tabRegenerar" type="button" role="tab" aria-selected="false"
-        class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-t-lg border border-b-0 border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100 -mb-px">
-        <i data-lucide="archive-restore" class="w-4 h-4"></i> Reimpresión desde histórico
-      </button>
-      <button id="tabEtiquetas" type="button" role="tab" aria-selected="false"
-        class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-t-lg border border-b-0 border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100 -mb-px">
-        <i data-lucide="tag" class="w-4 h-4"></i> Impresión de LPN
-      </button>
-      <button id="tabImd" type="button" role="tab" aria-selected="false"
-        class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-t-lg border border-b-0 border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100 -mb-px">
-        <i data-lucide="list-checks" class="w-4 h-4"></i> Impresión de detalle
-      </button>
-      <button id="tabDetalle" type="button" role="tab" aria-selected="false"
-        class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-t-lg border border-b-0 border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100 -mb-px">
-        <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Detalle de pedido
-      </button>
-      <button id="tabEmpaque" type="button" role="tab" aria-selected="false"
-        class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-t-lg border border-b-0 border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100 -mb-px">
-        <i data-lucide="package-check" class="w-4 h-4"></i> Resumen de empaque
-      </button>
+      <button id="tabPedidos" type="button" role="tab" aria-selected="false" class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-t-lg border border-b-0 -mb-px border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100"><i data-lucide="clipboard-list" class="w-4 h-4"></i> Pedidos</button>
       <button id="tabSaga" type="button" role="tab" aria-selected="false"
         class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-t-lg border border-b-0 border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100 -mb-px">
         <i data-lucide="folder" class="w-4 h-4"></i> Archivos Saga
       </button>
+      <button id="tabMaestra" type="button" role="tab" aria-selected="false" class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-t-lg border border-b-0 -mb-px border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100"><i data-lucide="ruler" class="w-4 h-4"></i> Maestra de volumen</button>
     </nav>
 
     <div id="view-datos" class="hide space-y-6"></div>
@@ -415,7 +397,7 @@
                   <span class="text-sm font-bold text-white leading-tight">Ripley · Máx. 12 códigos</span>
                   <span class="shrink-0 px-1.5 py-0.5 rounded font-mono text-xs font-bold bg-slate-700 text-slate-200">Ripley</span>
                 </div>
-                <p class="mt-2 text-xs text-slate-400 leading-snug">Reglas de Saga, máximo 12 códigos distintos por LPN y cada LPN hasta el 85% de la caja. Prefijo + Id LPN + correlativo de 6 dígitos.</p>
+                <p class="mt-2 text-xs text-slate-400 leading-snug">Reglas de Saga, máximo 12 códigos distintos por LPN y cada LPN se llena al 100% de la caja. Prefijo + Id LPN + correlativo de 6 dígitos.</p>
               </div>
             </label>
           </div>
@@ -964,6 +946,7 @@ $('fPed').onchange=async e=>{const f=e.target.files[0];if(!f)return;
   }};
 
 // ---- Criterios por cliente y series de LPN ----
+const NP=p=>p==='20614043271'?7:6; // largo del correlativo: Saga = 7 dígitos (LPN de 18), el resto 6
 const DIN={ripley12:1}; // criterios con prefijo escrito a mano (prefijo + Id LPN, ej. NC0019027); su serie se guarda por ese prefijo
 const dinPre=()=>$('pre').value.trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
 const PREF={aruma_vol:'TA',aruma_cl:'TA',inretail:'IP',saga:'20614043271',saga20:'20614043271'};
@@ -973,9 +956,9 @@ const AYUDA={
   aruma_vol:'Aruma · por volumen. Serie TA000001.',
   aruma_cl:'Aruma · por código y lote (caja master). Serie TA000001.',
   inretail:'InRetail · por volumen. Un código con el mismo lote no se separa en cajas distintas, salvo cajas master. Serie IP000001.',
-  saga:'Saga · por volumen. Un código con lotes distintos no comparte caja. Serie 20614043271000001.',
-  ripley12:'Ripley · mismas reglas de Saga con máximo 12 códigos distintos por LPN (cada LPN hasta el 85% del volumen de la caja). Escribe el prefijo + Id LPN (ej. NC0019027); el correlativo de 6 dígitos parte de 1 para cada Id LPN nuevo. LPN final: NC0019027000001.',
-  saga20:'Saga · mismas reglas de Saga (volumen, un código con lotes distintos no comparte caja) y máximo 20 códigos distintos por LPN. Cada LPN se llena como máximo al 85% del volumen de la caja. Serie 20614043271000001.'
+  saga:'Saga · por volumen. Un código con lotes distintos no comparte caja. Serie 206140432710000001.',
+  ripley12:'Ripley · mismas reglas de Saga con máximo 12 códigos distintos por LPN (cada LPN se llena al 100% del volumen de la caja). Escribe el prefijo + Id LPN (ej. NC0019027); el correlativo de 6 dígitos parte de 1 para cada Id LPN nuevo. LPN final: NC0019027000001.',
+  saga20:'Saga · mismas reglas de Saga (volumen, un código con lotes distintos no comparte caja) y máximo 20 códigos distintos por LPN. Cada LPN se llena como máximo al 85% del volumen de la caja. Serie 206140432710000001.'
 };
 let LASTS={},PRE_LIBRE='',FIJO='';
 const modo=()=>(document.querySelector('input[name="metodo"]:checked')||{}).value||'volumen';
@@ -991,7 +974,7 @@ function aplicarModo(){
     if(!dyn){if(!$('pre').disabled)PRE_LIBRE=$('pre').value;
     $('pre').value=p;$('pre').disabled=true}
     const u=ultSerie(p);$('ini').value=u+1;
-    $('stCfg').innerHTML='Serie <strong class="text-brand-700 font-bold">'+p+'</strong> · Último LPN: <strong class="text-slate-800 font-bold">'+p+String(u).padStart(6,'0')+'</strong> · Siguiente: <strong class="text-brand-700 font-bold">'+p+String(u+1).padStart(6,'0')+'</strong>';
+    $('stCfg').innerHTML='Serie <strong class="text-brand-700 font-bold">'+p+'</strong> · Último LPN: <strong class="text-slate-800 font-bold">'+p+String(u).padStart(NP(p),'0')+'</strong> · Siguiente: <strong class="text-brand-700 font-bold">'+p+String(u+1).padStart(NP(p),'0')+'</strong>';
   }else if(dyn){$('ini').value=1;$('stCfg').textContent='Escribe el prefijo + Id LPN de Ripley (ej. NC0019027) para ver su serie.'}else{
     const venia=$('pre').disabled;
     if(venia){$('pre').value=PRE_LIBRE;$('pre').disabled=false}
@@ -1015,7 +998,7 @@ function calcular(){
   const cap=num($('cap').value),pre=fijo||$('pre').value.trim(),E=1e-9;
   const metodo=(m0==='codlote'||m0==='aruma_cl')?'codlote':(m0==='inretail')?'inretail':(m0==='saga'||m0==='saga20'||m0==='ripley12')?'saga':'volumen';
   const maxCod=m0==='saga20'?20:m0==='ripley12'?12:0;
-  const capL=(m0==='saga20'||m0==='ripley12')?cap*0.85:cap; // Saga 20: cada LPN se llena como máximo al 85% de la caja
+  const capL=m0==='saga20'?cap*0.85:cap; // Saga 20: cada LPN se llena como máximo al 85% de la caja
   let ini=Math.max(1,parseInt($('ini').value)||1);
   LPNS=[];ERR=[];
   FIJO=fijo;PREUSO=pre;
@@ -1029,7 +1012,7 @@ function calcular(){
   PED.forEach(r=>{const k=String(r.ORDEN);if(!(k in idx)){idx[k]=orders.length;orders.push({k,rows:[]})}orders[idx[k]].rows.push(r)});
   orders.forEach(o=>{
     const head=o.rows[0];let cur=null;
-    const nuevo=()=>{cur={orden:o.k,head,lpn:pre+String(seq++).padStart(6,'0'),lines:[],vol:0};LPNS.push(cur)};
+    const nuevo=()=>{cur={orden:o.k,head,lpn:pre+String(seq++).padStart(NP(pre),'0'),lines:[],vol:0};LPNS.push(cur)};
     if(metodo==='inretail'||metodo==='saga'){
       const masterOn=$('chkMaster').checked;
       const loteDe=r=>norm(r['LOTE CLIENTE']!==undefined?r['LOTE CLIENTE']:r.ALOT);
@@ -1385,7 +1368,7 @@ function pdf(L,nombre,preview){
       foot:[['','','','','','','','Total Cantidad del Pedido',f2(TP),'',f2(TC),f2(TS)]],showFoot:'lastPage',
       styles:{fontSize:8,cellPadding:{top:3,bottom:3,left:3,right:3},overflow:'ellipsize'},
       headStyles:{fontStyle:'normal'},footStyles:{fontStyle:'normal',fillColor:false,textColor:0},
-      columnStyles:{0:{cellWidth:84,fontStyle:'bold'},1:{cellWidth:26},2:{cellWidth:50},3:{cellWidth:84},4:{cellWidth:168},5:{cellWidth:68},6:{cellWidth:58},7:{cellWidth:46},8:{cellWidth:62,halign:'right'},9:{cellWidth:46,halign:'right'},10:{cellWidth:42,halign:'right'},11:{cellWidth:48,halign:'right'}},
+      columnStyles:{0:{cellWidth:88,fontStyle:'bold'},1:{cellWidth:26},2:{cellWidth:50},3:{cellWidth:84},4:{cellWidth:164},5:{cellWidth:68},6:{cellWidth:58},7:{cellWidth:46},8:{cellWidth:62,halign:'right'},9:{cellWidth:46,halign:'right'},10:{cellWidth:42,halign:'right'},11:{cellWidth:48,halign:'right'}},
       didDrawPage:cabecera});
   });
   const total={};pages.forEach(p=>{total[p.k]=(total[p.k]||0)+1});const cnt={};
@@ -1937,8 +1920,8 @@ async function guardarHistorico(){
       const mem=memSer();mem[FIJO]={ultimo:ULT};
       try{localStorage.setItem('lpn_series',JSON.stringify(mem))}catch(e){}
       LASTS[FIJO]=ULT;$('ini').value=ULT+1;
-      $('stCfg').innerHTML='<span class="text-emerald-700 font-bold">Guardado exitoso: '+d.guardadas+' filas en HISTORICO_LPN. Último LPN: '+FIJO+String(ULT).padStart(6,'0')+'</span>';
-      $('connLabel').textContent="LPN "+FIJO+String(ULT).padStart(6,'0')+" Guardado";
+      $('stCfg').innerHTML='<span class="text-emerald-700 font-bold">Guardado exitoso: '+d.guardadas+' filas en HISTORICO_LPN. Último LPN: '+FIJO+String(ULT).padStart(NP(FIJO),'0')+'</span>';
+      $('connLabel').textContent="LPN "+FIJO+String(ULT).padStart(NP(FIJO),'0')+" Guardado";
     }else{
       CFG.ultimo=Number(d.ultimoLpn);
       $('ini').value=CFG.ultimo+1;
@@ -2093,17 +2076,63 @@ $('view-lpns').addEventListener('input',e=>{const t=e.target;if(t.classList.cont
 $('view-precio').addEventListener('input',e=>{const t=e.target;if(t.classList.contains('prin')){PR[+t.dataset.i].u=+t.value||0;prCuenta()}});
 
 
-// ---- Archivos Saga: una pestaña con subpestañas ----
-(function(){const subs=[['view-lpns','LPN Saga'],['view-datos','Catálogo y OC-Tienda'],['view-precio','Etiqueta de precio']];
- const v=document.createElement('div');v.id='view-saga';v.className='hide space-y-6';
+// ---- Grupos con subpestañas: Pedidos y Archivos Saga ----
+const SUBSEL={};
+function grupo(key,subs){const v=document.createElement('div');v.id='view-'+key;v.className='hide space-y-6';
  v.innerHTML='<div class="flex flex-wrap gap-2">'+subs.map(x=>`<button type="button" data-sub="${x[0]}" class="sub-btn px-4 py-2 text-sm font-semibold rounded-lg border">${x[1]}</button>`).join('')+'</div>';
- $('view-datos').before(v);subs.forEach(x=>v.appendChild($(x[0])));
+ $(subs[0][0]).before(v);subs.forEach(x=>v.appendChild($(x[0])));
  const sel=id=>{subs.forEach(x=>$(x[0]).classList.toggle('hide',x[0]!==id));
-  v.querySelectorAll('.sub-btn').forEach(b=>{b.className='sub-btn px-4 py-2 text-sm font-semibold rounded-lg border '+(b.dataset.sub===id?'bg-slate-900 text-white border-slate-900':'border-slate-200 text-slate-600 hover:bg-slate-100')})};
- v.querySelectorAll('.sub-btn').forEach(b=>b.onclick=()=>{sel(b.dataset.sub);if(b.dataset.sub==='view-datos'&&APPS_URL&&!DS.oc.rows.length&&!DS.catalogo.rows.length){dsCargar('catalogo');dsCargar('oc')}});
- sel('view-lpns')})();
+  v.querySelectorAll('.sub-btn').forEach(b=>{b.className='sub-btn px-4 py-2 text-sm font-semibold rounded-lg border '+(b.dataset.sub===id?'bg-slate-900 text-white border-slate-900':'border-slate-200 text-slate-600 hover:bg-slate-100')});
+  const x=subs.find(y=>y[0]===id);if(x&&x[3])x[3]()};
+ v.querySelectorAll('.sub-btn').forEach(b=>b.onclick=()=>{sel(b.dataset.sub);const x=subs.find(y=>y[0]===b.dataset.sub);if(x[2]&&$(x[2]))$(x[2]).focus()});
+ SUBSEL[key]=sel;sel(subs[0][0])}
+grupo('pedidos',[['view-regenerar','Reimpresión desde histórico','regDesde'],['view-etiquetas','Impresión de LPN','etqDesde'],['view-det','Detalle de pedido','detDesde'],['view-emp','Resumen de empaque','empDesde']]);
+grupo('saga',[['view-lpns','LPN Saga','lsDesde'],['view-datos','Catálogo y OC-Tienda',null,()=>{if(APPS_URL&&!DS.oc.rows.length&&!DS.catalogo.rows.length){dsCargar('catalogo');dsCargar('oc')}}],['view-precio','Etiqueta de precio','prDesde'],['view-imd','Impresión de detalle','imdDesde']]);
+
+// ---- Maestra de volumen (primera hoja del Sheet: IPROD / IVULI) ----
+const MA={rows:[],sucio:new Set()};
+function maMsg(t,err){const e=$('maSt');e.textContent=t;e.className='text-xs '+(err?'text-rose-600 font-semibold':'text-slate-500')}
+function maCuenta(){maMsg(MA.rows.length+' códigos'+(MA.sucio.size?' · '+MA.sucio.size+' pendientes de guardar en el Sheet':''))}
+function maRender(){const q=$('maQ').value.trim().toUpperCase();let n=0;
+ let h='<table class="w-full text-xs"><thead><tr><th class="text-left py-2 px-2 text-slate-500">IPROD (código)</th><th class="text-left py-2 px-2 text-slate-500">IVULI (volumen unitario)</th></tr></thead><tbody>';
+ MA.rows.forEach((r,i)=>{if(q&&!r[0].includes(q))return;if(n++>=100)return;
+  h+=`<tr class="border-t border-slate-100 ${MA.sucio.has(r[0])?'bg-amber-50':''}"><td class="px-2 py-1.5 font-mono">${esc(r[0])}</td><td class="px-1"><input data-i="${i}" value="${esc(r[1])}" class="maiv border border-slate-300 rounded px-2 py-1 w-32"></td></tr>`});
+ $('maT').innerHTML=h+'</tbody></table>';maCuenta()+(n>100?'':'');$('maSave').disabled=!MA.sucio.size;
+ if(n>100)$('maSt').textContent+=' · se muestran 100, usa el buscador'}
+function maPon(cod,vol){cod=norm(cod);const v=num(vol);if(!cod)return false;const r=MA.rows.find(x=>x[0]===cod);
+ if(r){if(num(r[1])===v)return true;r[1]=String(v)}else MA.rows.push([cod,String(v)]);MA.sucio.add(cod);return true}
+async function maCargar(){maMsg('Consultando el Sheet...');
+ try{const j=await (await fetch(APPS_URL+'?action=maestra&t='+Date.now(),{cache:'no-store'})).json();if(!j.ok)throw new Error(j.error||'respuesta inválida');
+  MA.rows=j.rows;MA.sucio.clear();setVol(j.rows.map(r=>({IPROD:r[0],IVULI:r[1]})),'Sheet, '+new Date().toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'}));maRender()}
+ catch(e){maMsg('No se pudo cargar: '+e.message+' (¿publicaste la nueva versión del script?)',true)}}
+function maAbrir(){if(!MA.rows.length){MA.rows=Object.keys(VOL).map(c=>[c,String(VOL[c])]);maRender();if(APPS_URL)maCargar()}}
+async function maArchivo(f){if(!f)return;
+ try{const rows=await readSheet(f);if(!rows.length||!('IPROD' in rows[0])||!('IVULI' in rows[0]))throw new Error('Faltan las columnas IPROD / IVULI (descarga la plantilla).');
+  let n=0;rows.forEach(r=>{if(maPon(r.IPROD,r.IVULI))n++});maRender();maMsg(n+' filas leídas de '+f.name+'. Revisa y pulsa "Guardar en el Sheet".')}
+ catch(e){maMsg('No se pudo leer el archivo: '+e.message,true)}}
+async function maGuardar(){const rows=MA.rows.filter(r=>MA.sucio.has(r[0])).map(r=>[r[0],String(num(r[1]))]);$('maSave').disabled=true;maMsg('Guardando '+rows.length+' códigos...');
+ try{const j=await (await fetch(APPS_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'maestra',rows})})).json();if(!j.ok)throw new Error(j.error);
+  setVol(MA.rows.map(r=>({IPROD:r[0],IVULI:r[1]})),'Sheet, guardado');MA.sucio.clear();maRender();maMsg('Guardado: '+j.nuevos+' nuevos, '+j.actualizados+' actualizados. Ya se usa en la división de pedidos.')}
+ catch(e){$('maSave').disabled=false;maMsg('No se pudo guardar: '+e.message,true)}}
+function maPlantilla(){const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['IPROD','IVULI']]),'Hoja1');XLSX.writeFile(wb,'PLANTILLA_MAESTRA_VOLUMEN.xlsx')}
+const maB='px-3 py-2 text-sm font-semibold rounded-lg border border-slate-200 hover:bg-slate-100';
+$('view-saga').after(Object.assign(document.createElement('div'),{id:'view-maestra',className:'hide space-y-6',innerHTML:`<section class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4">
+<div class="flex flex-wrap items-center gap-3 justify-between"><h3 class="font-bold text-slate-900">Maestra de volumen</h3><div class="flex flex-wrap gap-2">
+<button id="maCargar" type="button" class="${maB}">Cargar del Sheet</button><button id="maPla" type="button" class="${maB}">Descargar plantilla</button>
+<label class="${maB} cursor-pointer">Subir Excel<input id="maFile" type="file" accept=".xls,.xlsx,.csv" class="hide"></label>
+<button id="maSave" type="button" disabled class="px-3 py-2 text-sm font-semibold rounded-lg bg-slate-900 text-white disabled:opacity-40">Guardar en el Sheet</button></div></div>
+<p class="text-xs text-slate-500">Columnas: <span class="font-mono">IPROD</span> (código, con o sin GY) e <span class="font-mono">IVULI</span> (volumen unitario). Si el código ya existe se actualiza su volumen; si es nuevo se agrega. Puedes editar un volumen directamente en la tabla.</p>
+<div class="flex flex-wrap gap-2 items-center"><input id="maCod" placeholder="Código nuevo" class="${inpC}"><input id="maVol" placeholder="Volumen" class="${inpC}"><button id="maAdd" type="button" class="${maB}">Agregar</button>
+<input id="maQ" placeholder="Buscar código..." class="${inpC} ml-auto"></div>
+<p id="maSt" class="text-xs text-slate-500"></p><div id="maT" class="overflow-x-auto"></div></section>`}));
+$('maCargar').onclick=maCargar;$('maPla').onclick=maPlantilla;$('maSave').onclick=maGuardar;$('maFile').onchange=e=>maArchivo(e.target.files[0]);$('maQ').oninput=maRender;
+$('maAdd').onclick=()=>{if(!maPon($('maCod').value,$('maVol').value)){maMsg('Escribe el código y su volumen.',true);return}$('maCod').value=$('maVol').value='';maRender()};
+$('maT').addEventListener('input',e=>{const t=e.target;if(!t.classList.contains('maiv'))return;const r=MA.rows[+t.dataset.i];r[1]=t.value;MA.sucio.add(r[0]);t.closest('tr').classList.add('bg-amber-50');maCuenta();$('maSave').disabled=false});
+const maeAbrir=maAbrir;
 function showTab(t){
-  const T=[['tabDivision','division','view-division',null],['tabRegenerar','regenerar','view-regenerar','regDesde'],['tabEtiquetas','etiquetas','view-etiquetas','etqDesde'],['tabImd','imd','view-imd','imdDesde'],['tabDetalle','detalle','view-det','detDesde'],['tabEmpaque','empaque','view-emp','empDesde'],['tabSaga','saga','view-saga',null]];
+  const LEG={regenerar:['pedidos','view-regenerar'],etiquetas:['pedidos','view-etiquetas'],detalle:['pedidos','view-det'],empaque:['pedidos','view-emp'],imd:['saga','view-imd']};
+  if(LEG[t]){showTab(LEG[t][0]);SUBSEL[LEG[t][0]](LEG[t][1]);return}
+  const T=[['tabDivision','division','view-division',null],['tabPedidos','pedidos','view-pedidos',null],['tabSaga','saga','view-saga',null],['tabMaestra','maestra','view-maestra',null]];
   const on='border-slate-200 bg-white text-slate-900',off='border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100';
   T.forEach(([id,k,vw,foco])=>{
     const act=k===t;$(vw).classList.toggle('hide',!act);
@@ -2113,12 +2142,7 @@ function showTab(t){
   });
   if(window.lucide)lucide.createIcons();
 }
-$('tabImd').onclick=()=>showTab('imd');
-$('tabDetalle').onclick=()=>showTab('detalle');
-$('tabEmpaque').onclick=()=>showTab('empaque');
-$('tabEtiquetas').onclick=()=>showTab('etiquetas');
-$('tabDivision').onclick=()=>showTab('division');
-$('tabRegenerar').onclick=()=>showTab('regenerar');
+$('tabDivision').onclick=()=>showTab('division');$('tabPedidos').onclick=()=>showTab('pedidos');$('tabMaestra').onclick=()=>{showTab('maestra');maeAbrir()};
 $('lnkHist').onclick=e=>{e.preventDefault();showTab('regenerar')};$('bPlaVacia').onclick=plantillaVacia;
 refresh();
 aplicarModo();
