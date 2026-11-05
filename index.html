@@ -705,7 +705,7 @@
           <div class="w-9 h-9 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center shrink-0"><i data-lucide="file-spreadsheet" class="w-5 h-5"></i></div>
           <div>
             <h3 class="text-base font-bold text-slate-900 tracking-tight">Detalle de pedido</h3>
-            <p class="text-xs text-slate-500 mt-0.5">Detalle por LPN tomado del histórico: pedido, documento, cliente, LPN, caja, código, descripción, EAN y cantidad. Filtra y descarga en Excel.</p>
+            <p class="text-xs text-slate-500 mt-0.5">Detalle por LPN tomado del histórico: pedido, documento, cliente, LPN, caja, código, descripción, EAN, lote, expira y cantidad. Filtra y descarga en Excel.</p>
           </div>
         </div>
         <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono bg-slate-100 text-slate-600 border border-slate-200 self-start sm:self-auto"><span>Desde histórico · XLS</span></div>
@@ -878,6 +878,11 @@ const norm=v=>String(v==null?'':v).trim().toUpperCase();
 const num=v=>{const n=parseFloat(String(v==null?'':v).replace(',','.'));return isNaN(n)?0:n};
 const MES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 function d8(v){const s=String(v||'').replace(/\D/g,'');return s.length===8?s.slice(6,8)+'/'+s.slice(4,6)+'/'+s.slice(2,4):String(v||'')}
+function fmtExp(v){const t=String(v==null?'':v).trim();if(!t)return '';let m;
+  if((m=t.match(/^(\d{4})(\d{2})(\d{2})$/)))return m[3]+'/'+m[2]+'/'+m[1];
+  if((m=t.match(/^(\d{4})-(\d{2})-(\d{2})/)))return m[3]+'/'+m[2]+'/'+m[1];
+  if((m=t.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/)))return m[1].padStart(2,'0')+'/'+m[2].padStart(2,'0')+'/'+m[3];
+  return t}
 function exp8(v){const s=String(v||'').replace(/\D/g,'');return s.length===8?MES[+s.slice(4,6)-1]+'.-'+s.slice(2,4):String(v||'')}
 function f2(n){return Number(n).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2})}
 
@@ -1514,7 +1519,7 @@ async function buscarReg(){
 }
 $('bRegBuscar').onclick=buscarReg;
 // Reporte de detalle desde el histórico. PEDIDO = orden (BPCS); DOCUMENTO = número de pedido, igual que en la etiqueta
-const COLS_DET=['PEDIDO','DOCUMENTO','CLIENTE','LPN','CAJA','CODIGO','DESCRIPCION','EAN','CANTIDAD'];
+const COLS_DET=['PEDIDO','DOCUMENTO','CLIENTE','LPN','CAJA','CODIGO','DESCRIPCION','EAN','LOTE','EXPIRA','CANTIDAD'];
 function reporteRows(L,all){
   const T=v=>String(v==null?'':v).trim();
   all=all||L;const cnt={},mapa={};
@@ -1523,7 +1528,7 @@ function reporteRows(L,all){
   L.forEach(l=>l.lines.forEach(x=>{const r=x.r;out.push({
     PEDIDO:T(l.orden),DOCUMENTO:T(r.PEDIDO),CLIENTE:T(r.CLIENTE),LPN:l.lpn,
     CAJA:(Number(r.CAJA)>0?Number(r.CAJA):mapa[l.orden+'|'+l.lpn]),
-    CODIGO:T(x.code),DESCRIPCION:T(r.DESCRIPCION),EAN:T(r['COD.EAN']),CANTIDAD:x.units})}));
+    CODIGO:T(x.code),DESCRIPCION:T(r.DESCRIPCION),EAN:T(r['COD.EAN']),LOTE:T(r['LOTE CLIENTE']!==undefined&&r['LOTE CLIENTE']!==''?r['LOTE CLIENTE']:r.ALOT),EXPIRA:fmtExp(r.EXPIRA),CANTIDAD:x.units})}));
   return out;
 }
 function reporteHistorico(){
@@ -2181,7 +2186,7 @@ async function drBuscar(){stMsg('dr','Consultando...');
   ['drPdf','drPrev'].forEach(i=>$(i).disabled=false);stMsg('dr',L.length+' LPN.'+(sinCat?' '+sinCat+' código(s) no están en el catálogo Ripley: salen sin SKU Ripley.':''),!!sinCat)}
  catch(e){stMsg('dr','Error: '+e.message,true)}}
 function drLineas(l,g,CA){const A={},out=[]; // una fila por código + lote + expira: si se repite (p. ej. varias ubicaciones) se suman las cantidades
- l.lines.forEach(x=>{const lote=String(x.r['LOTE CLIENTE']!==undefined&&x.r['LOTE CLIENTE']!==''?x.r['LOTE CLIENTE']:(x.r.ALOT||'')).trim(),exp=exp8(x.r.EXPIRA),k=norm(x.code)+'|'+lote+'|'+exp;if(A[k]){A[k].cant+=Math.round(num(x.units));return}
+ l.lines.forEach(x=>{const lote=String(x.r['LOTE CLIENTE']!==undefined&&x.r['LOTE CLIENTE']!==''?x.r['LOTE CLIENTE']:(x.r.ALOT||'')).trim(),exp=fmtExp(x.r.EXPIRA),k=norm(x.code)+'|'+lote+'|'+exp;if(A[k]){A[k].cant+=Math.round(num(x.units));return}
   const ean=String(x.r['COD.EAN']||'').trim()||String(x.code).replace(/^GY/,''),c=CA.find(r=>r[3]===ean&&r[0]===g.o)||CA.find(r=>r[3]===ean)||[];
   A[k]={ean:c[3]||ean,sku:c[2]||'',desc:c[6]||String(x.r.DESCRIPCION||''),lote,exp,cant:Math.round(num(x.units))};out.push(A[k])});return out}
 let DRORI='v'; // 'v' = 100x200 vertical (texto girado 90°) · 'h' = 200x100 horizontal (texto sin girar)
