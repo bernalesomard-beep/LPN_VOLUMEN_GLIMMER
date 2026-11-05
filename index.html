@@ -608,10 +608,10 @@
           <div class="w-9 h-9 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center shrink-0"><i data-lucide="tag" class="w-5 h-5"></i></div>
           <div>
             <h3 class="text-base font-bold text-slate-900 tracking-tight">Impresión de etiquetas LPN</h3>
-            <p class="text-xs text-slate-500 mt-0.5">Etiqueta de 104 × 64 mm con código de barras Code 128, una por LPN, tomada del histórico. Sirve para uno o varios pedidos.</p>
+            <p class="text-xs text-slate-500 mt-0.5">Etiqueta de 100 × 64 mm con código de barras Code 128, una por LPN, tomada del histórico. Sirve para uno o varios pedidos.</p>
           </div>
         </div>
-        <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono bg-slate-100 text-slate-600 border border-slate-200 self-start sm:self-auto"><span>104 × 64 mm · Code 128</span></div>
+        <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono bg-slate-100 text-slate-600 border border-slate-200 self-start sm:self-auto"><span>100 × 64 mm · Code 128</span></div>
       </div>
 
       <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
@@ -802,10 +802,10 @@
           <div class="w-9 h-9 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center shrink-0"><i data-lucide="list-checks" class="w-5 h-5"></i></div>
           <div>
             <h3 class="text-base font-bold text-slate-900 tracking-tight">Impresión de detalle por LPN</h3>
-            <p class="text-xs text-slate-500 mt-0.5">Hoja de 104 × 208 mm por LPN con BPCS, LPN, documento y la lista de productos, lotes y cantidades. Si no entran todos, sigue en «Hoja 2 de N».</p>
+            <p class="text-xs text-slate-500 mt-0.5">Hoja de 100 × 200 mm por LPN con BPCS, LPN, documento y la lista de productos, lotes y cantidades. Si no entran todos, sigue en «Hoja 2 de N».</p>
           </div>
         </div>
-        <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono bg-slate-100 text-slate-600 border border-slate-200 self-start sm:self-auto"><span>104 × 208 mm</span></div>
+        <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono bg-slate-100 text-slate-600 border border-slate-200 self-start sm:self-auto"><span>100 × 200 mm</span></div>
       </div>
       <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
         <div class="xl:col-span-8 space-y-4">
@@ -1597,7 +1597,7 @@ consultaHist('det',reporteRows,COLS_DET,'DETALLE_PEDIDO');
 consultaHist('emp',(LL)=>empaqueRows(LL),COLS_EMP,'RESUMEN_EMPAQUE');
 
 
-// ================== IMPRESIÓN DE ETIQUETAS LPN (104 x 64 mm, Code 128) ==================
+// ================== IMPRESIÓN DE ETIQUETAS LPN (100 x 64 mm, Code 128) ==================
 const C128P=['212222','222122','222221','121223','121322','131222','122213','122312','132212','221213','221312','231212','112232','122132','122231','113222','123122','123221','223211','221132','221231','213212','223112','312131','311222','321122','321221','312212','322112','322211','212123','212321','232121','111323','131123','131321','112313','132113','132311','211313','231113','231311','112133','112331','132131','113123','113321','133121','313121','211331','231131','213113','213311','213131','311123','311321','331121','312113','312311','332111','314111','221411','431111','111224','111422','121124','121421','141122','141221','112214','112412','122114','122411','142112','142211','241211','221114','413111','241112','134111','111242','121142','121241','114212','124112','124211','411212','421112','421211','212141','214121','412121','111143','111341','131141','114113','114311','411113','411311','113141','114131','311141','411131','211412','211214','211232','2331112'];
 // Devuelve los anchos (en módulos) alternando barra/espacio, empezando por barra. Subconjuntos B y C con cambio automático.
 function code128(txt){
@@ -1656,7 +1656,7 @@ $('etqMarca').oninput=()=>{try{localStorage.setItem('lpn_marca',$('etqMarca').va
 pintarLogo();
 
 function dibujarEtiqueta(doc,l,o){
-  const W=104,H=64,mx=4,h=l.head;
+  const W=100,H=64,mx=4,h=l.head;
   let cli=String(h.CLIENTE==null?'':h.CLIENTE).trim().replace(/\s+/g,' ');
   if(o.sinSA)cli=cli.replace(/[\s,]+(S\.?\s?A\.?\s?C\.?|S\.?\s?A\.?|S\.?\s?R\.?\s?L\.?|E\.?\s?I\.?\s?R\.?\s?L\.?)\s*$/i,'').trim();
   const und=l.lines.reduce((a,x)=>a+x.units,0);
@@ -1706,9 +1706,9 @@ function dibujarEtiqueta(doc,l,o){
 }
 function etiquetasDoc(L){
   const {jsPDF}=window.jspdf;
-  const doc=new jsPDF({orientation:'landscape',unit:'mm',format:[104,64]});
+  const doc=new jsPDF({orientation:'landscape',unit:'mm',format:[100,64]});
   const o={mod:parseFloat($('etqMod').value)||0.5,sinSA:$('etqSinSA').checked};
-  L.forEach((l,i)=>{if(i>0)doc.addPage([104,64],'landscape');dibujarEtiqueta(doc,l,o)});
+  L.forEach((l,i)=>{if(i>0)doc.addPage([100,64],'landscape');dibujarEtiqueta(doc,l,o)});
   return doc;
 }
 function etqSel(){return ETQL.filter((l,i)=>{const c=document.querySelector('input[data-etq="'+i+'"]');return c?c.checked:true})}
@@ -1773,10 +1773,10 @@ $('bEtqPrev').onclick=()=>{
 };
 
 
-// ================== IMPRESIÓN DE DETALLE POR LPN (104 x 208 mm) ==================
+// ================== IMPRESIÓN DE DETALLE POR LPN (100 x 200 mm) ==================
 function detalleDoc(L){
   const {jsPDF}=window.jspdf;
-  const W=104,H=208,Y0=44,PITCH=4.4,YMAX=200,PER=Math.floor((YMAX-Y0)/PITCH)+1;
+  const W=100,H=200,Y0=44,PITCH=4.4,YMAX=192,PER=Math.floor((YMAX-Y0)/PITCH)+1;
   const doc=new jsPDF({orientation:'portrait',unit:'mm',format:[W,H]});
   const T=v=>String(v==null?'':v).trim();
   let primera=true;
@@ -1793,23 +1793,23 @@ function detalleDoc(L){
       doc.setTextColor(0);doc.setDrawColor(0);doc.setFont('helvetica','bold');
       // encabezado: rótulos alineados a la derecha, valores a la izquierda
       let lf=13;doc.setFontSize(lf);while(lf>8&&doc.getTextWidth('DOCUMENTO:')>34){lf-=0.5;doc.setFontSize(lf)}
-      const lab=(t,y)=>{doc.setFontSize(lf);doc.text(t,38,y,{align:'right'})};
-      const val=(t,y)=>{fit(t,21,W-42-4,9);doc.text(t,42,y)};
+      const lab=(t,y)=>{doc.setFontSize(lf);doc.text(t,36,y,{align:'right'})};
+      const val=(t,y)=>{fit(t,21,W-40-4,9);doc.text(t,40,y)};
       lab('BPCS:',9);val(T(h.ORDEN),9);
       lab('LPN:',16.5);val(T(l.lpn),16.5);
       lab('DOCUMENTO:',24);val(T(h.PEDIDO),24);
       // cabecera de la tabla
       doc.setFontSize(14);
-      doc.text('Producto',5,36.7);doc.text('Lote',55,36.7,{align:'center'});doc.text('Cantidad',88,36.7,{align:'center'});
-      doc.setLineWidth(0.4);doc.line(5,38.5,99,38.5);
+      doc.text('Producto',5,36.7);doc.text('Lote',53,36.7,{align:'center'});doc.text('Cantidad',84,36.7,{align:'center'});
+      doc.setLineWidth(0.4);doc.line(5,38.5,95,38.5);
       // filas
       rows.slice(p*PER,(p+1)*PER).forEach((r,i)=>{
         const y=Y0+i*PITCH;
-        fit(r.ean,9,40,6);doc.text(r.ean,5,y);
-        fit(r.lote,9,28,6);doc.text(r.lote,55,y,{align:'center'});
-        doc.setFontSize(9);const q=Number.isInteger(r.u)?String(r.u):String(+r.u.toFixed(2));doc.text(q,88,y,{align:'center'});
+        fit(r.ean,9,38,6);doc.text(r.ean,5,y);
+        fit(r.lote,9,24,6);doc.text(r.lote,53,y,{align:'center'});
+        doc.setFontSize(9);const q=Number.isInteger(r.u)?String(r.u):String(+r.u.toFixed(2));doc.text(q,84,y,{align:'center'});
       });
-      if(pages>1){doc.setFontSize(9);doc.text('Hoja '+(p+1)+' de '+pages,W/2,205,{align:'center'})}
+      if(pages>1){doc.setFontSize(9);doc.text('Hoja '+(p+1)+' de '+pages,W/2,197,{align:'center'})}
     }
   });
   return doc;
@@ -2011,7 +2011,7 @@ async function lsBuscar(){stMsg('ls','Consultando...');
 function lsRender(){$('lsT').innerHTML='<table class="w-full text-xs"><thead><tr>'+['Documento','O/C','Local','ID de cita','Fecha de entrega','LPN','OC-TIENDA'].map(c=>`<th class="text-left py-2 px-2 text-slate-500">${c}</th>`).join('')+'</tr></thead><tbody>'+
  Object.keys(GR).map(k=>{const g=GR[k];return `<tr class="border-t border-slate-100"><td class="px-2 py-1.5 font-mono">${esc(g.doc)}</td>`+['o','t','cita','fecha'].map(f=>`<td class="px-1"><input data-g="${esc(k)}" data-f="${f}" value="${esc(g[f])}" class="lsin border border-slate-300 rounded px-2 py-1 w-32"></td>`).join('')+`<td class="px-2">${g.n}</td><td class="px-2 ${g.ok?'text-emerald-700':'text-rose-600'}">${g.ok?'encontrado':'no encontrado'}</td></tr>`}).join('')+'</tbody></table>';
  ['lsPdf','lsPrev','lsSave'].forEach(i=>$(i).disabled=false)}
-function lsEtq(doc,l,mod){const W=104,mx=5,X0=mx+38,g=GR[l.k],hd=l.head;
+function lsEtq(doc,l,mod){const W=100,mx=5,X0=mx+38,g=GR[l.k],hd=l.head;
  doc.setTextColor(0);doc.setDrawColor(0);doc.setLineWidth(0.25);doc.setFont('helvetica','bold');
  const fila=(y,rot,val)=>{doc.setFontSize(10.5);doc.text(rot,mx,y);doc.line(X0,y+1,W-mx,y+1);let fs=12;doc.setFontSize(fs);val=String(val);
   while(fs>7&&doc.getTextWidth(val)>W-mx-X0-2){fs-=.5;doc.setFontSize(fs)}doc.text(val,(X0+W-mx)/2,y,{align:'center'})};
@@ -2021,8 +2021,8 @@ function lsEtq(doc,l,mod){const W=104,mx=5,X0=mx+38,g=GR[l.k],hd=l.head;
  const b=code128(l.lpn),m=b.reduce((a,c)=>a+c,0),md=Math.min(mod,(W-2*mx)/m);let x=(W-m*md)/2;
  b.forEach((a,i)=>{if(i%2===0)doc.rect(x,y+4,a*md,10,'F');x+=a*md});
  doc.setFontSize(16);doc.text(String(l.lpn),W/2,y+22,{align:'center'})}
-function lsDoc(){const {jsPDF}=window.jspdf,doc=new jsPDF({orientation:'landscape',unit:'mm',format:[104,64]}),mod=parseFloat($('etqMod').value)||0.5;
- LS.forEach((l,i)=>{if(i)doc.addPage([104,64],'landscape');lsEtq(doc,l,mod)});return doc}
+function lsDoc(){const {jsPDF}=window.jspdf,doc=new jsPDF({orientation:'landscape',unit:'mm',format:[100,64]}),mod=parseFloat($('etqMod').value)||0.5;
+ LS.forEach((l,i)=>{if(i)doc.addPage([100,64],'landscape');lsEtq(doc,l,mod)});return doc}
 async function lsSave(){const rows=Object.values(GR).filter(g=>g.o&&g.t&&(g.cita||g.fecha)).map(g=>[g.o,g.doc,g.t,'',g.cita,g.fecha]);
  if(!rows.length){stMsg('ls','Nada que guardar: falta O/C, Local, ID de cita o fecha.',true);return}
  try{const j=await (await fetch(APPS_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'upsert',hoja:'oc',rows})})).json();
@@ -2066,7 +2066,7 @@ function prDoc(){const {jsPDF}=window.jspdf,v=id=>+$(id).value||0,tot=v('prAn')|
  PR.filter(p=>p.ok).forEach(p=>{for(let u=0;u<Math.max(0,Math.round(p.u));u++){if(n&&n%co===0)doc.addPage(pg,'landscape');prEtq(doc,p.c,mb+(n%co)*(an+sh)+dx,dy,an,al);n++}});return doc}
 
 $('view-datos').insertAdjacentHTML('afterend',
- '<div id="view-lpns" class="hide space-y-6">'+busBox('ls','Etiqueta LPN Saga (104 × 64 mm)',bx('lsPdf','Etiquetas PDF')+bx('lsPrev','Vista previa')+bx('lsSave','Guardar cita y fecha en OC-TIENDA'))+'</div>'+
+ '<div id="view-lpns" class="hide space-y-6">'+busBox('ls','Etiqueta LPN Saga (100 × 64 mm)',bx('lsPdf','Etiquetas PDF')+bx('lsPrev','Vista previa')+bx('lsSave','Guardar cita y fecha en OC-TIENDA'))+'</div>'+
  '<div id="view-precio" class="hide space-y-6">'+busBox('pr','Etiqueta de precio (EAN-13, una por unidad)',pinp()+`<button id="prPdf" type="button" disabled class="${dsBtn} disabled:opacity-40"><span id="prPdfT">PDF</span></button>`+bx('prPrev','Vista previa'))+'</div>');
 $('lsBuscar').onclick=lsBuscar;$('prBuscar').onclick=prBuscar;
 $('lsPdf').onclick=()=>lsDoc().save('ETIQUETAS_LPN_SAGA_'+LS[0].orden+'.pdf');
@@ -2143,7 +2143,7 @@ async function bajarR(p){const c=$(p+'Campo').value,d=$(p+'Desde').value.trim(),
   if(!G[k]){const f=oc.rows.find(r=>nd(r[1])===k)||[];G[k]={doc:String(hd[MAPA.doc]||'').trim(),o:f[0]||'',t:f[2]||'',n:f[3]||'',fact:f[6]||'',ok:f.length>0,cnt:0}}G[k].cnt++});
  RS[p]={L,G,CA:ca.rows};return RS[p]}
 function ajustar(doc,txt,fs,maxW,min){txt=String(txt);doc.setFontSize(fs);while(fs>(min||6)&&doc.getTextWidth(txt)>maxW){fs-=.5;doc.setFontSize(fs)}return txt}
-// Rótulo LPN Ripley: 104 x 64 mm (igual que el LPN de Saga)
+// Rótulo LPN Ripley: 100 x 64 mm (igual que el LPN de Saga)
 async function lrBuscar(){stMsg('lr','Consultando...');
  try{const {L,G}=await bajarR('lr'),sin=Object.values(G).filter(g=>!g.ok).length;
   $('lrT').innerHTML='<table class="w-full text-xs"><thead><tr>'+['Documento (Nro. ped. cliente)','O. Compra','Cód. tienda','Sucursal','Factura','LPN','OC-TIENDA'].map(c=>`<th class="text-left py-2 px-2 text-slate-500">${c}</th>`).join('')+'</tr></thead><tbody>'+
@@ -2151,7 +2151,7 @@ async function lrBuscar(){stMsg('lr','Consultando...');
   ['lrPdf','lrPrev','lrSave'].forEach(i=>$(i).disabled=false);
   stMsg('lr',L.length+' LPN en '+Object.keys(G).length+' documento(s).'+(sin?' '+sin+' sin datos en OC-TIENDA Ripley: completa O. Compra, tienda y sucursal a mano.':' Completa la factura si falta (se imprime 004-).'),!!sin)}
  catch(e){stMsg('lr','Error: '+e.message,true)}}
-function lrEtq(doc,l,g){const W=104,H=64,x1=1.5,x2=33.5,x3=57,x4=W-1.5,gy=42,hy=47.5,by=62.5,cm=(a,b)=>(a+b)/2;
+function lrEtq(doc,l,g){const W=100,H=64,x1=1.5,x2=33.5,x3=57,x4=W-1.5,gy=42,hy=47.5,by=62.5,cm=(a,b)=>(a+b)/2;
  doc.setTextColor(0);doc.setDrawColor(0);doc.setFont('helvetica','bold');doc.setLineWidth(0.5);doc.rect(1.5,1.5,W-3,H-3);
  doc.setFontSize(10);doc.text('PROVEEDOR :',6,7);doc.setFontSize(11);doc.text('SHEGLAM',W/2+8,6.2,{align:'center'});
  doc.setFontSize(9);doc.text('NRO. PED. CLIENTE : '+g.doc,10,12);
@@ -2166,14 +2166,14 @@ function lrEtq(doc,l,g){const W=104,H=64,x1=1.5,x2=33.5,x3=57,x4=W-1.5,gy=42,hy=
  const fa=!g.fact?'004-':(/-/.test(g.fact)?g.fact:'004-'+g.fact);doc.text(ajustar(doc,fa,9,x2-x1-3),cm(x1,x2),61.4,{align:'center'});
  doc.text(ajustar(doc,String(Math.round(l.und)),32,x3-x2-3,12),cm(x2,x3),59.5,{align:'center'});
  doc.text(ajustar(doc,g.t,32,x4-x3-3,12),cm(x3,x4),59.5,{align:'center'})}
-function lrDoc(){const {jsPDF}=window.jspdf,doc=new jsPDF({orientation:'landscape',unit:'mm',format:[104,64]}),{L,G}=RS.lr;
- L.forEach((l,i)=>{if(i)doc.addPage([104,64],'landscape');lrEtq(doc,l,G[l.k])});return doc}
+function lrDoc(){const {jsPDF}=window.jspdf,doc=new jsPDF({orientation:'landscape',unit:'mm',format:[100,64]}),{L,G}=RS.lr;
+ L.forEach((l,i)=>{if(i)doc.addPage([100,64],'landscape');lrEtq(doc,l,G[l.k])});return doc}
 async function lrSave(){const rows=Object.values(RS.lr.G).filter(g=>g.o&&g.t&&g.fact).map(g=>[g.o,g.doc,g.t,g.n,'','',g.fact]);
  if(!rows.length){stMsg('lr','Nada que guardar: falta O. Compra, cód. tienda o factura.',true);return}
  try{const j=await (await fetch(APPS_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'upsert',hoja:'oc_ripley',rows})})).json();
   if(!j.ok)throw new Error(j.error);stMsg('lr','Guardado en OC-TIENDA RIPLEY: '+j.nuevos+' nuevos, '+j.actualizados+' actualizados.')}
  catch(e){stMsg('lr','No se pudo guardar: '+e.message,true)}}
-// Detalle por LPN Ripley: hoja 104 x 208 mm vertical, con el diseño horizontal girado 90°
+// Detalle por LPN Ripley: hoja 100 x 200 mm vertical, con el diseño horizontal girado 90°
 async function drBuscar(){stMsg('dr','Consultando...');
  try{const {L,G,CA}=await bajarR('dr');let sinCat=0;
   $('drT').innerHTML='<table class="w-full text-xs"><thead><tr>'+['LPN','Pedido','Códigos','Unidades','Sin catálogo'].map(c=>`<th class="text-left py-2 px-2 text-slate-500">${c}</th>`).join('')+'</tr></thead><tbody>'+
@@ -2184,19 +2184,19 @@ function drLineas(l,g,CA){const A={},out=[]; // una fila por código: si el cód
  l.lines.forEach(x=>{const k=norm(x.code);if(A[k]){A[k].cant+=Math.round(num(x.units));return}
   const ean=String(x.r['COD.EAN']||'').trim()||String(x.code).replace(/^GY/,''),c=CA.find(r=>r[3]===ean&&r[0]===g.o)||CA.find(r=>r[3]===ean)||[];
   A[k]={ean:c[3]||ean,sku:c[2]||'',desc:c[6]||String(x.r.DESCRIPCION||''),cant:Math.round(num(x.units))};out.push(A[k])});return out}
-function drPag(doc,l,g,rows){const H=208;
+function drPag(doc,l,g,rows){const H=200;
  const T=(t,u,v,al)=>{t=String(t);const w=doc.getTextWidth(t);if(al==='c')u-=w/2;else if(al==='r')u-=w;doc.text(t,v,H-u,{angle:90})},R=(u,v,w,h)=>doc.rect(v,H-u-w,h,w),Ln=(u1,v1,u2,v2)=>doc.line(v1,H-u1,v2,H-u2);
  doc.setTextColor(0);doc.setDrawColor(0);doc.setFont('helvetica','bold');doc.setLineWidth(0.4);
- doc.setFontSize(17);T('TIENDAS POR DEPARTAMENTO RIPLEY',104,12,'c');doc.setFontSize(13);T('LPN: '+l.lpn,8,24);T('Ped: '+g.doc,200,24,'r');
- const cx=[6,40,74,100,188,202];R(6,28,196,70);Ln(6,35,202,35);cx.slice(1,-1).forEach(u=>Ln(u,28,u,98));
- doc.setFontSize(9);['EAN 13','SKU SHEGLAM','SKU RIPLEY','DESCRIPCION','CANT'].forEach((t,i)=>T(t,(cx[i]+cx[i+1])/2,33,'c'));
- rows.forEach((r,i)=>{const v=41+i*4.8;doc.setFontSize(8);[r.ean,r.ean,r.sku,null,r.cant].forEach((t,j)=>{if(t!==null)T(t,(cx[j]+cx[j+1])/2,v,'c')});
+ doc.setFontSize(17);T('TIENDAS POR DEPARTAMENTO RIPLEY',100,10,'c');doc.setFontSize(13);T('LPN: '+l.lpn,6,21);T('Ped: '+g.doc,194,21,'r');
+ const cx=[6,38,70,96,180,194];R(6,25,188,70);Ln(6,32,194,32);cx.slice(1,-1).forEach(u=>Ln(u,25,u,95));
+ doc.setFontSize(9);['EAN 13','SKU SHEGLAM','SKU RIPLEY','DESCRIPCION','CANT'].forEach((t,i)=>T(t,(cx[i]+cx[i+1])/2,30,'c'));
+ rows.forEach((r,i)=>{const v=38+i*4.8;doc.setFontSize(8);[r.ean,r.ean,r.sku,null,r.cant].forEach((t,j)=>{if(t!==null)T(t,(cx[j]+cx[j+1])/2,v,'c')});
   let t=String(r.desc),mx=cx[4]-cx[3]-3;ajustar(doc,t,8,mx,5);while(doc.getTextWidth(t)>mx&&t.length>3)t=t.slice(0,-2);T(t,(cx[3]+cx[4])/2,v,'c')})}
-function drDoc(){const {jsPDF}=window.jspdf,doc=new jsPDF({orientation:'portrait',unit:'mm',format:[104,208]}),{L,G,CA}=RS.dr;let n=0;
- L.forEach(l=>{const ls=drLineas(l,G[l.k],CA);for(let p=0;p<Math.max(1,Math.ceil(ls.length/12));p++){if(n++)doc.addPage([104,208],'portrait');drPag(doc,l,G[l.k],ls.slice(p*12,p*12+12))}});return doc}
+function drDoc(){const {jsPDF}=window.jspdf,doc=new jsPDF({orientation:'portrait',unit:'mm',format:[100,200]}),{L,G,CA}=RS.dr;let n=0;
+ L.forEach(l=>{const ls=drLineas(l,G[l.k],CA);for(let p=0;p<Math.max(1,Math.ceil(ls.length/12));p++){if(n++)doc.addPage([100,200],'portrait');drPag(doc,l,G[l.k],ls.slice(p*12,p*12+12))}});return doc}
 // Vistas
-$('view-maestra').after(Object.assign(document.createElement('div'),{id:'view-lpnr',className:'hide space-y-6',innerHTML:busBox('lr','Rótulo LPN Ripley (104 × 64 mm)',bx('lrPdf','Etiquetas PDF')+bx('lrPrev','Vista previa')+bx('lrSave','Guardar factura en OC-TIENDA'))}));
-$('view-lpnr').after(Object.assign(document.createElement('div'),{id:'view-detr',className:'hide space-y-6',innerHTML:busBox('dr','Detalle por LPN Ripley (104 × 208 mm, vertical)',bx('drPdf','Detalle PDF')+bx('drPrev','Vista previa'))}));
+$('view-maestra').after(Object.assign(document.createElement('div'),{id:'view-lpnr',className:'hide space-y-6',innerHTML:busBox('lr','Rótulo LPN Ripley (100 × 64 mm)',bx('lrPdf','Etiquetas PDF')+bx('lrPrev','Vista previa')+bx('lrSave','Guardar factura en OC-TIENDA'))}));
+$('view-lpnr').after(Object.assign(document.createElement('div'),{id:'view-detr',className:'hide space-y-6',innerHTML:busBox('dr','Detalle por LPN Ripley (100 × 200 mm, vertical)',bx('drPdf','Detalle PDF')+bx('drPrev','Vista previa'))}));
 $('view-detr').after(Object.assign(document.createElement('div'),{id:'view-datosr',className:'hide space-y-6',innerHTML:dsBox('cat_ripley')+dsBox('oc_ripley')}));
 ['cat_ripley','oc_ripley'].forEach(k=>{$('ds'+k+'Cargar').onclick=()=>dsCargar(k);$('ds'+k+'File').onchange=e=>dsArchivo(k,e.target.files[0]);$('ds'+k+'Sube').onclick=()=>dsSube(k);$('ds'+k+'Q').oninput=()=>dsRender(k)});
 $('view-datosr').addEventListener('input',e=>{const t=e.target;if(!t.classList.contains('dsin'))return;DS[t.dataset.k].rows[+t.dataset.i][+t.dataset.j]=t.value;$('ds'+t.dataset.k+'Sube').disabled=false});
