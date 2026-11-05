@@ -2176,30 +2176,37 @@ async function lrSave(){const rows=Object.values(RS.lr.G).filter(g=>g.o&&g.t&&g.
 // Detalle por LPN Ripley: hoja 100 x 200 mm vertical, con el diseño horizontal girado 90°
 async function drBuscar(){stMsg('dr','Consultando...');
  try{const {L,G,CA}=await bajarR('dr');let sinCat=0;
-  $('drT').innerHTML='<table class="w-full text-xs"><thead><tr>'+['LPN','Pedido','Códigos','Unidades','Sin catálogo'].map(c=>`<th class="text-left py-2 px-2 text-slate-500">${c}</th>`).join('')+'</tr></thead><tbody>'+
+  $('drT').innerHTML='<table class="w-full text-xs"><thead><tr>'+['LPN','Pedido','Líneas (código+lote)','Unidades','Sin catálogo'].map(c=>`<th class="text-left py-2 px-2 text-slate-500">${c}</th>`).join('')+'</tr></thead><tbody>'+
   L.map(l=>{const ls=drLineas(l,G[l.k],CA),f=ls.filter(x=>!x.sku).length;sinCat+=f;return `<tr class="border-t border-slate-100"><td class="px-2 py-1.5 font-mono">${esc(l.lpn)}</td><td class="px-2">${esc(G[l.k].doc)}</td><td class="px-2">${ls.length}</td><td class="px-2">${Math.round(l.und)}</td><td class="px-2 ${f?'text-rose-600':''}">${f}</td></tr>`}).join('')+'</tbody></table>';
   ['drPdf','drPrev'].forEach(i=>$(i).disabled=false);stMsg('dr',L.length+' LPN.'+(sinCat?' '+sinCat+' código(s) no están en el catálogo Ripley: salen sin SKU Ripley.':''),!!sinCat)}
  catch(e){stMsg('dr','Error: '+e.message,true)}}
-function drLineas(l,g,CA){const A={},out=[]; // una fila por código: si el código aparece en varias líneas (p. ej. lotes distintos) se suman las cantidades
- l.lines.forEach(x=>{const k=norm(x.code);if(A[k]){A[k].cant+=Math.round(num(x.units));return}
+function drLineas(l,g,CA){const A={},out=[]; // una fila por código + lote + expira: si se repite (p. ej. varias ubicaciones) se suman las cantidades
+ l.lines.forEach(x=>{const lote=String(x.r['LOTE CLIENTE']!==undefined&&x.r['LOTE CLIENTE']!==''?x.r['LOTE CLIENTE']:(x.r.ALOT||'')).trim(),exp=exp8(x.r.EXPIRA),k=norm(x.code)+'|'+lote+'|'+exp;if(A[k]){A[k].cant+=Math.round(num(x.units));return}
   const ean=String(x.r['COD.EAN']||'').trim()||String(x.code).replace(/^GY/,''),c=CA.find(r=>r[3]===ean&&r[0]===g.o)||CA.find(r=>r[3]===ean)||[];
-  A[k]={ean:c[3]||ean,sku:c[2]||'',desc:c[6]||String(x.r.DESCRIPCION||''),cant:Math.round(num(x.units))};out.push(A[k])});return out}
-function drPag(doc,l,g,rows){const H=200;
- const T=(t,u,v,al)=>{t=String(t);const w=doc.getTextWidth(t);if(al==='c')u-=w/2;else if(al==='r')u-=w;doc.text(t,v,H-u,{angle:90})},R=(u,v,w,h)=>doc.rect(v,H-u-w,h,w),Ln=(u1,v1,u2,v2)=>doc.line(v1,H-u1,v2,H-u2);
+  A[k]={ean:c[3]||ean,sku:c[2]||'',desc:c[6]||String(x.r.DESCRIPCION||''),lote,exp,cant:Math.round(num(x.units))};out.push(A[k])});return out}
+let DRORI='v'; // 'v' = 100x200 vertical (texto girado 90°) · 'h' = 200x100 horizontal (texto sin girar)
+function drPag(doc,l,g,rows,pg,np){const H=200,HZ=DRORI==='h';
+ const T=(t,u,v,al)=>{t=String(t);const w=doc.getTextWidth(t);if(al==='c')u-=w/2;else if(al==='r')u-=w;if(HZ)doc.text(t,u,v);else doc.text(t,v,H-u,{angle:90})},
+  R=(u,v,w,h)=>HZ?doc.rect(u,v,w,h):doc.rect(v,H-u-w,h,w),
+  Ln=(u1,v1,u2,v2)=>HZ?doc.line(u1,v1,u2,v2):doc.line(v1,H-u1,v2,H-u2);
  doc.setTextColor(0);doc.setDrawColor(0);doc.setFont('helvetica','bold');doc.setLineWidth(0.4);
- doc.setFontSize(17);T('TIENDAS POR DEPARTAMENTO RIPLEY',100,10,'c');doc.setFontSize(13);T('LPN: '+l.lpn,6,21);T('Ped: '+g.doc,194,21,'r');
- const cx=[6,38,70,96,180,194];R(6,25,188,70);Ln(6,32,194,32);cx.slice(1,-1).forEach(u=>Ln(u,25,u,95));
- doc.setFontSize(9);['EAN 13','SKU SHEGLAM','SKU RIPLEY','DESCRIPCION','CANT'].forEach((t,i)=>T(t,(cx[i]+cx[i+1])/2,30,'c'));
- rows.forEach((r,i)=>{const v=38+i*4.8;doc.setFontSize(8);[r.ean,r.ean,r.sku,null,r.cant].forEach((t,j)=>{if(t!==null)T(t,(cx[j]+cx[j+1])/2,v,'c')});
-  let t=String(r.desc),mx=cx[4]-cx[3]-3;ajustar(doc,t,8,mx,5);while(doc.getTextWidth(t)>mx&&t.length>3)t=t.slice(0,-2);T(t,(cx[3]+cx[4])/2,v,'c')})}
-function drDoc(){const {jsPDF}=window.jspdf,doc=new jsPDF({orientation:'portrait',unit:'mm',format:[100,200]}),{L,G,CA}=RS.dr;let n=0;
- L.forEach(l=>{const ls=drLineas(l,G[l.k],CA);for(let p=0;p<Math.max(1,Math.ceil(ls.length/12));p++){if(n++)doc.addPage([100,200],'portrait');drPag(doc,l,G[l.k],ls.slice(p*12,p*12+12))}});return doc}
+ doc.setFontSize(17);T('TIENDAS POR DEPARTAMENTO RIPLEY',100,10,'c');doc.setFontSize(13);T('LPN: '+l.lpn,6,21);T('Ped: '+g.doc+(np>1?'  ('+pg+'/'+np+')':''),194,21,'r');
+ const cx=[6,34,62,82,144,164,182,194],cab=['EAN 13','SKU SHEGLAM','SKU RIPLEY','DESCRIPCION','LOTE','EXPIRA','CANT'];
+ R(6,25,188,70);Ln(6,32,194,32);cx.slice(1,-1).forEach(u=>Ln(u,25,u,95));
+ doc.setFontSize(9);cab.forEach((t,i)=>T(t,(cx[i]+cx[i+1])/2,30,'c'));
+ rows.forEach((r,i)=>{const v=38+i*4.8;
+  [r.ean,r.ean,r.sku,r.desc,r.lote,r.exp,r.cant].forEach((t,j)=>{t=String(t==null?'':t);if(!t)return;const mx=cx[j+1]-cx[j]-2;
+   doc.setFontSize(8);ajustar(doc,t,8,mx,5);while(doc.getTextWidth(t)>mx&&t.length>3)t=t.slice(0,-2);T(t,(cx[j]+cx[j+1])/2,v,'c')})})}
+function drDoc(){const {jsPDF}=window.jspdf,HZ=DRORI==='h',fm=HZ?[200,100]:[100,200],ori=HZ?'landscape':'portrait',doc=new jsPDF({orientation:ori,unit:'mm',format:fm}),{L,G,CA}=RS.dr;let n=0;
+ L.forEach(l=>{const ls=drLineas(l,G[l.k],CA),np=Math.max(1,Math.ceil(ls.length/12));for(let p=0;p<np;p++){if(n++)doc.addPage(fm,ori);drPag(doc,l,G[l.k],ls.slice(p*12,p*12+12),p+1,np)}});return doc}
 // Vistas
 $('view-maestra').after(Object.assign(document.createElement('div'),{id:'view-lpnr',className:'hide space-y-6',innerHTML:busBox('lr','Rótulo LPN Ripley (100 × 64 mm)',bx('lrPdf','Etiquetas PDF')+bx('lrPrev','Vista previa')+bx('lrSave','Guardar factura en OC-TIENDA'))}));
 $('view-lpnr').after(Object.assign(document.createElement('div'),{id:'view-detr',className:'hide space-y-6',innerHTML:busBox('dr','Detalle por LPN Ripley (100 × 200 mm, vertical)',bx('drPdf','Detalle PDF')+bx('drPrev','Vista previa'))}));
 $('view-detr').after(Object.assign(document.createElement('div'),{id:'view-datosr',className:'hide space-y-6',innerHTML:dsBox('cat_ripley')+dsBox('oc_ripley')}));
 ['cat_ripley','oc_ripley'].forEach(k=>{$('ds'+k+'Cargar').onclick=()=>dsCargar(k);$('ds'+k+'File').onchange=e=>dsArchivo(k,e.target.files[0]);$('ds'+k+'Sube').onclick=()=>dsSube(k);$('ds'+k+'Q').oninput=()=>dsRender(k)});
 $('view-datosr').addEventListener('input',e=>{const t=e.target;if(!t.classList.contains('dsin'))return;DS[t.dataset.k].rows[+t.dataset.i][+t.dataset.j]=t.value;$('ds'+t.dataset.k+'Sube').disabled=false});
+$('drT').before(Object.assign(document.createElement('div'),{className:'flex flex-wrap items-center gap-2 text-xs text-slate-700',innerHTML:'<label for="drOri" class="font-semibold">Orientación del PDF:</label><select id="drOri" class="px-2 py-1.5 border border-slate-200 rounded-lg bg-slate-50 text-xs"><option value="v">Vertical 100×200 (texto girado 90°)</option><option value="h">Horizontal 200×100 (texto sin girar)</option></select><span class="text-slate-500">Si tu impresora imprime el texto pequeño y al final de la etiqueta, prueba la otra opción.</span>'}));
+$('drOri').onchange=e=>{DRORI=e.target.value};
 $('lrBuscar').onclick=lrBuscar;$('drBuscar').onclick=drBuscar;
 $('lrPdf').onclick=()=>lrDoc().save('ROTULOS_LPN_RIPLEY.pdf');$('lrPrev').onclick=()=>window.open(lrDoc().output('bloburl'));$('lrSave').onclick=lrSave;
 $('drPdf').onclick=()=>drDoc().save('DETALLE_LPN_RIPLEY.pdf');$('drPrev').onclick=()=>window.open(drDoc().output('bloburl'));
