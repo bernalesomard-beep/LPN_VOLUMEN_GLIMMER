@@ -2180,8 +2180,10 @@ async function drBuscar(){stMsg('dr','Consultando...');
   L.map(l=>{const ls=drLineas(l,G[l.k],CA),f=ls.filter(x=>!x.sku).length;sinCat+=f;return `<tr class="border-t border-slate-100"><td class="px-2 py-1.5 font-mono">${esc(l.lpn)}</td><td class="px-2">${esc(G[l.k].doc)}</td><td class="px-2">${ls.length}</td><td class="px-2">${Math.round(l.und)}</td><td class="px-2 ${f?'text-rose-600':''}">${f}</td></tr>`}).join('')+'</tbody></table>';
   ['drPdf','drPrev'].forEach(i=>$(i).disabled=false);stMsg('dr',L.length+' LPN.'+(sinCat?' '+sinCat+' código(s) no están en el catálogo Ripley: salen sin SKU Ripley.':''),!!sinCat)}
  catch(e){stMsg('dr','Error: '+e.message,true)}}
-function drLineas(l,g,CA){return l.lines.map(x=>{const ean=String(x.r['COD.EAN']||'').trim()||String(x.code).replace(/^GY/,'');
- const c=CA.find(r=>r[3]===ean&&r[0]===g.o)||CA.find(r=>r[3]===ean)||[];return {ean:c[3]||ean,sku:c[2]||'',desc:c[6]||String(x.r.DESCRIPCION||''),cant:Math.round(num(x.units))}})}
+function drLineas(l,g,CA){const A={},out=[]; // una fila por código: si el código aparece en varias líneas (p. ej. lotes distintos) se suman las cantidades
+ l.lines.forEach(x=>{const k=norm(x.code);if(A[k]){A[k].cant+=Math.round(num(x.units));return}
+  const ean=String(x.r['COD.EAN']||'').trim()||String(x.code).replace(/^GY/,''),c=CA.find(r=>r[3]===ean&&r[0]===g.o)||CA.find(r=>r[3]===ean)||[];
+  A[k]={ean:c[3]||ean,sku:c[2]||'',desc:c[6]||String(x.r.DESCRIPCION||''),cant:Math.round(num(x.units))};out.push(A[k])});return out}
 function drPag(doc,l,g,rows){const H=208;
  const T=(t,u,v,al)=>{t=String(t);const w=doc.getTextWidth(t);if(al==='c')u-=w/2;else if(al==='r')u-=w;doc.text(t,v,H-u,{angle:90})},R=(u,v,w,h)=>doc.rect(v,H-u-w,h,w),Ln=(u1,v1,u2,v2)=>doc.line(v1,H-u1,v2,H-u2);
  doc.setTextColor(0);doc.setDrawColor(0);doc.setFont('helvetica','bold');doc.setLineWidth(0.4);
