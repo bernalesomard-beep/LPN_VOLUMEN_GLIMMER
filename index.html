@@ -143,6 +143,7 @@
         class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-t-lg border border-b-0 border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100 -mb-px">
         <i data-lucide="folder" class="w-4 h-4"></i> Archivos Saga
       </button>
+      <button id="tabRipley" type="button" role="tab" aria-selected="false" class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-t-lg border border-b-0 -mb-px border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100"><i data-lucide="folder-open" class="w-4 h-4"></i> Archivos Ripley</button>
       <button id="tabMaestra" type="button" role="tab" aria-selected="false" class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-t-lg border border-b-0 -mb-px border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100"><i data-lucide="ruler" class="w-4 h-4"></i> Maestra de volumen</button>
     </nav>
 
@@ -2129,10 +2130,84 @@ $('maCargar').onclick=maCargar;$('maPla').onclick=maPlantilla;$('maSave').onclic
 $('maAdd').onclick=()=>{if(!maPon($('maCod').value,$('maVol').value)){maMsg('Escribe el código y su volumen.',true);return}$('maCod').value=$('maVol').value='';maRender()};
 $('maT').addEventListener('input',e=>{const t=e.target;if(!t.classList.contains('maiv'))return;const r=MA.rows[+t.dataset.i];r[1]=t.value;MA.sucio.add(r[0]);t.closest('tr').classList.add('bg-amber-50');maCuenta();$('maSave').disabled=false});
 const maeAbrir=maAbrir;
+// ---- Archivos Ripley: rótulo LPN, detalle por LPN, catálogo y OC-Tienda ----
+DS.oc_ripley={t:'OC - Tienda Ripley (ID de cita, fecha y factura editables)',cols:['ORDEN DE COMPRA','DOCUMENTO','COD TIENDA','TIENDA DESTINO','ID DE CITA','FECHA DE ENTREGA','FACTURA'],ed:[4,5,6],rows:[]};
+DS.cat_ripley={t:'Catálogo Ripley',cols:['Numero OC','RUC','SKU','EAN','Temporada','Código EAN del Producto','Descripción del Producto','Unidades','Moneda','Precio','Departamento','Linea','Tipo','Atributos Whitaker','Precio Ahora'],ed:[],rows:[]};
+const RS={};
+async function bajarR(p){const c=$(p+'Campo').value,d=$(p+'Desde').value.trim(),h=$(p+'Hasta').value.trim()||d;
+ if(!d||isNaN(+d)||isNaN(+h))throw new Error('Escribe un número válido en Desde (y Hasta si es rango).');
+ const [j,oc,ca]=await Promise.all([q2('historico&campo='+encodeURIComponent(c)+'&desde='+encodeURIComponent(d)+'&hasta='+encodeURIComponent(h)),q2('oc_ripley'),q2('cat_ripley')]);
+ if(!j.rows.length)throw new Error('No se encontraron pedidos en ese rango.');
+ const L=reconstruir(j.header,j.rows),G={};
+ L.forEach(l=>{const hd=l.head,k=nd(hd[MAPA.doc]);l.k=k;l.und=l.lines.reduce((a,x)=>a+num(x.units),0);
+  if(!G[k]){const f=oc.rows.find(r=>nd(r[1])===k)||[];G[k]={doc:String(hd[MAPA.doc]||'').trim(),o:f[0]||'',t:f[2]||'',n:f[3]||'',fact:f[6]||'',ok:f.length>0,cnt:0}}G[k].cnt++});
+ RS[p]={L,G,CA:ca.rows};return RS[p]}
+function ajustar(doc,txt,fs,maxW,min){txt=String(txt);doc.setFontSize(fs);while(fs>(min||6)&&doc.getTextWidth(txt)>maxW){fs-=.5;doc.setFontSize(fs)}return txt}
+// Rótulo LPN Ripley: 104 x 64 mm (igual que el LPN de Saga)
+async function lrBuscar(){stMsg('lr','Consultando...');
+ try{const {L,G}=await bajarR('lr'),sin=Object.values(G).filter(g=>!g.ok).length;
+  $('lrT').innerHTML='<table class="w-full text-xs"><thead><tr>'+['Documento (Nro. ped. cliente)','O. Compra','Cód. tienda','Sucursal','Factura','LPN','OC-TIENDA'].map(c=>`<th class="text-left py-2 px-2 text-slate-500">${c}</th>`).join('')+'</tr></thead><tbody>'+
+  Object.keys(G).map(k=>{const g=G[k];return `<tr class="border-t border-slate-100"><td class="px-2 py-1.5 font-mono">${esc(g.doc)}</td>`+['o','t','n','fact'].map(f=>`<td class="px-1"><input data-g="${esc(k)}" data-f="${f}" value="${esc(g[f])}" class="lrin border border-slate-300 rounded px-2 py-1 w-32"></td>`).join('')+`<td class="px-2">${g.cnt}</td><td class="px-2 ${g.ok?'text-emerald-700':'text-rose-600'}">${g.ok?'encontrado':'no encontrado'}</td></tr>`}).join('')+'</tbody></table>';
+  ['lrPdf','lrPrev','lrSave'].forEach(i=>$(i).disabled=false);
+  stMsg('lr',L.length+' LPN en '+Object.keys(G).length+' documento(s).'+(sin?' '+sin+' sin datos en OC-TIENDA Ripley: completa O. Compra, tienda y sucursal a mano.':' Completa la factura si falta (se imprime 004-).'),!!sin)}
+ catch(e){stMsg('lr','Error: '+e.message,true)}}
+function lrEtq(doc,l,g){const W=104,H=64,x1=1.5,x2=33.5,x3=57,x4=W-1.5,gy=42,hy=47.5,by=62.5,cm=(a,b)=>(a+b)/2;
+ doc.setTextColor(0);doc.setDrawColor(0);doc.setFont('helvetica','bold');doc.setLineWidth(0.5);doc.rect(1.5,1.5,W-3,H-3);
+ doc.setFontSize(10);doc.text('PROVEEDOR :',6,7);doc.setFontSize(11);doc.text('SHEGLAM',W/2+8,6.2,{align:'center'});
+ doc.setFontSize(9);doc.text('NRO. PED. CLIENTE : '+g.doc,10,12);
+ const b=code128(l.lpn),m=b.reduce((a,c)=>a+c,0),md=Math.min(0.6,(W-16)/m);let x=(W-m*md)/2;
+ b.forEach((a,i)=>{if(i%2===0)doc.rect(x,15,a*md,19,'F');x+=a*md});
+ doc.setFontSize(13);doc.text(String(l.lpn),W/2,39,{align:'center'});
+ doc.line(x1,gy,x4,gy);doc.line(x1,hy,x4,hy);doc.line(x2,gy,x2,by);doc.line(x3,gy,x3,by);doc.line(x1,52.7,x2,52.7);doc.line(x1,57.7,x2,57.7);
+ doc.setFontSize(8);doc.text('O.COMPRA',cm(x1,x2),45.8,{align:'center'});doc.text('UNDS.',cm(x2,x3),45.8,{align:'center'});
+ doc.text(ajustar(doc,'SUC: '+g.n,8,x4-x3-3,5),cm(x3,x4),45.8,{align:'center'});
+ doc.text(ajustar(doc,g.o,11,x2-x1-3),cm(x1,x2),51.5,{align:'center'});
+ doc.setFontSize(8);doc.text('FACTURA',cm(x1,x2),56.5,{align:'center'});
+ const fa=!g.fact?'004-':(/-/.test(g.fact)?g.fact:'004-'+g.fact);doc.text(ajustar(doc,fa,9,x2-x1-3),cm(x1,x2),61.4,{align:'center'});
+ doc.text(ajustar(doc,String(Math.round(l.und)),32,x3-x2-3,12),cm(x2,x3),59.5,{align:'center'});
+ doc.text(ajustar(doc,g.t,32,x4-x3-3,12),cm(x3,x4),59.5,{align:'center'})}
+function lrDoc(){const {jsPDF}=window.jspdf,doc=new jsPDF({orientation:'landscape',unit:'mm',format:[104,64]}),{L,G}=RS.lr;
+ L.forEach((l,i)=>{if(i)doc.addPage([104,64],'landscape');lrEtq(doc,l,G[l.k])});return doc}
+async function lrSave(){const rows=Object.values(RS.lr.G).filter(g=>g.o&&g.t&&g.fact).map(g=>[g.o,g.doc,g.t,g.n,'','',g.fact]);
+ if(!rows.length){stMsg('lr','Nada que guardar: falta O. Compra, cód. tienda o factura.',true);return}
+ try{const j=await (await fetch(APPS_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'upsert',hoja:'oc_ripley',rows})})).json();
+  if(!j.ok)throw new Error(j.error);stMsg('lr','Guardado en OC-TIENDA RIPLEY: '+j.nuevos+' nuevos, '+j.actualizados+' actualizados.')}
+ catch(e){stMsg('lr','No se pudo guardar: '+e.message,true)}}
+// Detalle por LPN Ripley: hoja 104 x 208 mm vertical, con el diseño horizontal girado 90°
+async function drBuscar(){stMsg('dr','Consultando...');
+ try{const {L,G,CA}=await bajarR('dr');let sinCat=0;
+  $('drT').innerHTML='<table class="w-full text-xs"><thead><tr>'+['LPN','Pedido','Códigos','Unidades','Sin catálogo'].map(c=>`<th class="text-left py-2 px-2 text-slate-500">${c}</th>`).join('')+'</tr></thead><tbody>'+
+  L.map(l=>{const ls=drLineas(l,G[l.k],CA),f=ls.filter(x=>!x.sku).length;sinCat+=f;return `<tr class="border-t border-slate-100"><td class="px-2 py-1.5 font-mono">${esc(l.lpn)}</td><td class="px-2">${esc(G[l.k].doc)}</td><td class="px-2">${ls.length}</td><td class="px-2">${Math.round(l.und)}</td><td class="px-2 ${f?'text-rose-600':''}">${f}</td></tr>`}).join('')+'</tbody></table>';
+  ['drPdf','drPrev'].forEach(i=>$(i).disabled=false);stMsg('dr',L.length+' LPN.'+(sinCat?' '+sinCat+' código(s) no están en el catálogo Ripley: salen sin SKU Ripley.':''),!!sinCat)}
+ catch(e){stMsg('dr','Error: '+e.message,true)}}
+function drLineas(l,g,CA){return l.lines.map(x=>{const ean=String(x.r['COD.EAN']||'').trim()||String(x.code).replace(/^GY/,'');
+ const c=CA.find(r=>r[3]===ean&&r[0]===g.o)||CA.find(r=>r[3]===ean)||[];return {ean:c[3]||ean,sku:c[2]||'',desc:c[6]||String(x.r.DESCRIPCION||''),cant:Math.round(num(x.units))}})}
+function drPag(doc,l,g,rows){const H=208;
+ const T=(t,u,v,al)=>{t=String(t);const w=doc.getTextWidth(t);if(al==='c')u-=w/2;else if(al==='r')u-=w;doc.text(t,v,H-u,{angle:90})},R=(u,v,w,h)=>doc.rect(v,H-u-w,h,w),Ln=(u1,v1,u2,v2)=>doc.line(v1,H-u1,v2,H-u2);
+ doc.setTextColor(0);doc.setDrawColor(0);doc.setFont('helvetica','bold');doc.setLineWidth(0.4);
+ doc.setFontSize(17);T('TIENDAS POR DEPARTAMENTO RIPLEY',104,12,'c');doc.setFontSize(13);T('LPN: '+l.lpn,8,24);T('Ped: '+g.doc,200,24,'r');
+ const cx=[6,40,74,100,188,202];R(6,28,196,70);Ln(6,35,202,35);cx.slice(1,-1).forEach(u=>Ln(u,28,u,98));
+ doc.setFontSize(9);['EAN 13','SKU SHEGLAM','SKU RIPLEY','DESCRIPCION','CANT'].forEach((t,i)=>T(t,(cx[i]+cx[i+1])/2,33,'c'));
+ rows.forEach((r,i)=>{const v=41+i*4.8;doc.setFontSize(8);[r.ean,r.ean,r.sku,null,r.cant].forEach((t,j)=>{if(t!==null)T(t,(cx[j]+cx[j+1])/2,v,'c')});
+  let t=String(r.desc),mx=cx[4]-cx[3]-3;ajustar(doc,t,8,mx,5);while(doc.getTextWidth(t)>mx&&t.length>3)t=t.slice(0,-2);T(t,(cx[3]+cx[4])/2,v,'c')})}
+function drDoc(){const {jsPDF}=window.jspdf,doc=new jsPDF({orientation:'portrait',unit:'mm',format:[104,208]}),{L,G,CA}=RS.dr;let n=0;
+ L.forEach(l=>{const ls=drLineas(l,G[l.k],CA);for(let p=0;p<Math.max(1,Math.ceil(ls.length/12));p++){if(n++)doc.addPage([104,208],'portrait');drPag(doc,l,G[l.k],ls.slice(p*12,p*12+12))}});return doc}
+// Vistas
+$('view-maestra').after(Object.assign(document.createElement('div'),{id:'view-lpnr',className:'hide space-y-6',innerHTML:busBox('lr','Rótulo LPN Ripley (104 × 64 mm)',bx('lrPdf','Etiquetas PDF')+bx('lrPrev','Vista previa')+bx('lrSave','Guardar factura en OC-TIENDA'))}));
+$('view-lpnr').after(Object.assign(document.createElement('div'),{id:'view-detr',className:'hide space-y-6',innerHTML:busBox('dr','Detalle por LPN Ripley (104 × 208 mm, vertical)',bx('drPdf','Detalle PDF')+bx('drPrev','Vista previa'))}));
+$('view-detr').after(Object.assign(document.createElement('div'),{id:'view-datosr',className:'hide space-y-6',innerHTML:dsBox('cat_ripley')+dsBox('oc_ripley')}));
+['cat_ripley','oc_ripley'].forEach(k=>{$('ds'+k+'Cargar').onclick=()=>dsCargar(k);$('ds'+k+'File').onchange=e=>dsArchivo(k,e.target.files[0]);$('ds'+k+'Sube').onclick=()=>dsSube(k);$('ds'+k+'Q').oninput=()=>dsRender(k)});
+$('view-datosr').addEventListener('input',e=>{const t=e.target;if(!t.classList.contains('dsin'))return;DS[t.dataset.k].rows[+t.dataset.i][+t.dataset.j]=t.value;$('ds'+t.dataset.k+'Sube').disabled=false});
+$('lrBuscar').onclick=lrBuscar;$('drBuscar').onclick=drBuscar;
+$('lrPdf').onclick=()=>lrDoc().save('ROTULOS_LPN_RIPLEY.pdf');$('lrPrev').onclick=()=>window.open(lrDoc().output('bloburl'));$('lrSave').onclick=lrSave;
+$('drPdf').onclick=()=>drDoc().save('DETALLE_LPN_RIPLEY.pdf');$('drPrev').onclick=()=>window.open(drDoc().output('bloburl'));
+$('view-lpnr').addEventListener('input',e=>{const t=e.target;if(t.classList.contains('lrin'))RS.lr.G[t.dataset.g][t.dataset.f]=t.value});
+grupo('ripley',[['view-lpnr','LPN Ripley (rótulo)','lrDesde'],['view-detr','Detalle LPN Ripley','drDesde'],['view-datosr','Catálogo y OC-Tienda Ripley',null,()=>{if(APPS_URL&&!DS.oc_ripley.rows.length&&!DS.cat_ripley.rows.length){dsCargar('cat_ripley');dsCargar('oc_ripley')}}]]);
+
 function showTab(t){
   const LEG={regenerar:['pedidos','view-regenerar'],etiquetas:['pedidos','view-etiquetas'],detalle:['pedidos','view-det'],empaque:['pedidos','view-emp'],imd:['saga','view-imd']};
   if(LEG[t]){showTab(LEG[t][0]);SUBSEL[LEG[t][0]](LEG[t][1]);return}
-  const T=[['tabDivision','division','view-division',null],['tabPedidos','pedidos','view-pedidos',null],['tabSaga','saga','view-saga',null],['tabMaestra','maestra','view-maestra',null]];
+  const T=[['tabDivision','division','view-division',null],['tabPedidos','pedidos','view-pedidos',null],['tabSaga','saga','view-saga',null],['tabRipley','ripley','view-ripley',null],['tabMaestra','maestra','view-maestra',null]];
   const on='border-slate-200 bg-white text-slate-900',off='border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100';
   T.forEach(([id,k,vw,foco])=>{
     const act=k===t;$(vw).classList.toggle('hide',!act);
@@ -2142,7 +2217,7 @@ function showTab(t){
   });
   if(window.lucide)lucide.createIcons();
 }
-$('tabDivision').onclick=()=>showTab('division');$('tabPedidos').onclick=()=>showTab('pedidos');$('tabMaestra').onclick=()=>{showTab('maestra');maeAbrir()};
+$('tabDivision').onclick=()=>showTab('division');$('tabPedidos').onclick=()=>showTab('pedidos');$('tabRipley').onclick=()=>showTab('ripley');$('tabMaestra').onclick=()=>{showTab('maestra');maeAbrir()};
 $('lnkHist').onclick=e=>{e.preventDefault();showTab('regenerar')};$('bPlaVacia').onclick=plantillaVacia;
 refresh();
 aplicarModo();
