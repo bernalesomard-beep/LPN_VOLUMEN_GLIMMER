@@ -331,6 +331,16 @@
                 <p class="mt-2 text-xs text-slate-400 leading-snug">1 LPN por caja master y un LPN de saldo.</p>
               </div>
             </label>
+            <label class="relative block cursor-pointer">
+              <input type="radio" name="metodo" value="volumen20" class="peer sr-only">
+              <div class="opt-card h-full rounded-xl border border-slate-700 bg-slate-800/60 p-4 hover:border-slate-500 peer-checked:border-brand-500 peer-checked:bg-brand-700/15 peer-checked:ring-2 peer-checked:ring-brand-500/40 peer-focus-visible:ring-2 peer-focus-visible:ring-white/60">
+                <div class="flex items-start justify-between gap-2">
+                  <span class="text-sm font-bold text-white leading-tight">Por volumen · Máx. 20 códigos</span>
+                  <span class="shrink-0 px-1.5 py-0.5 rounded font-mono text-xs font-bold bg-slate-700 text-slate-200">Libre</span>
+                </div>
+                <p class="mt-2 text-xs text-slate-400 leading-snug">Llena cada LPN hasta el volumen máximo, con máximo 20 códigos distintos por LPN.</p>
+              </div>
+            </label>
           </div>
         </div>
         <div>
@@ -392,6 +402,16 @@
               </div>
             </label>
             <label class="relative block cursor-pointer">
+              <input type="radio" name="metodo" value="tienda1000" class="peer sr-only">
+              <div class="opt-card h-full rounded-xl border border-slate-700 bg-slate-800/60 p-4 hover:border-slate-500 peer-checked:border-brand-500 peer-checked:bg-brand-700/15 peer-checked:ring-2 peer-checked:ring-brand-500/40 peer-focus-visible:ring-2 peer-focus-visible:ring-white/60">
+                <div class="flex items-start justify-between gap-2">
+                  <span class="text-sm font-bold text-white leading-tight">Tienda 1000</span>
+                  <span class="shrink-0 px-1.5 py-0.5 rounded font-mono text-xs font-bold bg-slate-700 text-slate-200">Saga</span>
+                </div>
+                <p class="mt-2 text-xs text-slate-400 leading-snug">Un código por LPN (código por caja). Si el código tiene caja master, 1 LPN por cada caja master.</p>
+              </div>
+            </label>
+            <label class="relative block cursor-pointer">
               <input type="radio" name="metodo" value="ripley12" class="peer sr-only">
               <div class="opt-card h-full rounded-xl border border-slate-700 bg-slate-800/60 p-4 hover:border-slate-500 peer-checked:border-brand-500 peer-checked:bg-brand-700/15 peer-checked:ring-2 peer-checked:ring-brand-500/40 peer-focus-visible:ring-2 peer-focus-visible:ring-white/60">
                 <div class="flex items-start justify-between gap-2">
@@ -399,6 +419,41 @@
                   <span class="shrink-0 px-1.5 py-0.5 rounded font-mono text-xs font-bold bg-slate-700 text-slate-200">Ripley</span>
                 </div>
                 <p class="mt-2 text-xs text-slate-400 leading-snug">Reglas de Saga, máximo 12 códigos distintos por LPN y cada LPN se llena al 100% de la caja. Prefijo + Id LPN + correlativo de 6 dígitos.</p>
+              </div>
+            </label>
+          </div>
+        </div>
+        <div class="lg:col-span-3">
+          <div class="mb-2.5 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400"><span class="w-1.5 h-1.5 rounded-full bg-brand-500"></span>DBS</div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <label class="relative block cursor-pointer">
+              <input type="radio" name="metodo" value="dbs_vol" class="peer sr-only">
+              <div class="opt-card h-full rounded-xl border border-slate-700 bg-slate-800/60 p-4 hover:border-slate-500 peer-checked:border-brand-500 peer-checked:bg-brand-700/15 peer-checked:ring-2 peer-checked:ring-brand-500/40 peer-focus-visible:ring-2 peer-focus-visible:ring-white/60">
+                <div class="flex items-start justify-between gap-2">
+                  <span class="text-sm font-bold text-white leading-tight">DBS · Volumen</span>
+                  <span class="shrink-0 px-1.5 py-0.5 rounded font-mono text-xs font-bold bg-slate-700 text-slate-200">DBS</span>
+                </div>
+                <p class="mt-2 text-xs text-slate-400 leading-snug">Cubicaje estándar con serie propia DBS0000001.</p>
+              </div>
+            </label>
+            <label class="relative block cursor-pointer">
+              <input type="radio" name="metodo" value="dbs_cl" class="peer sr-only">
+              <div class="opt-card h-full rounded-xl border border-slate-700 bg-slate-800/60 p-4 hover:border-slate-500 peer-checked:border-brand-500 peer-checked:bg-brand-700/15 peer-checked:ring-2 peer-checked:ring-brand-500/40 peer-focus-visible:ring-2 peer-focus-visible:ring-white/60">
+                <div class="flex items-start justify-between gap-2">
+                  <span class="text-sm font-bold text-white leading-tight">DBS · Código y lote</span>
+                  <span class="shrink-0 px-1.5 py-0.5 rounded font-mono text-xs font-bold bg-slate-700 text-slate-200">DBS</span>
+                </div>
+                <p class="mt-2 text-xs text-slate-400 leading-snug">1 LPN por caja master y un LPN de saldo, por código y lote.</p>
+              </div>
+            </label>
+            <label class="relative block cursor-pointer">
+              <input type="radio" name="metodo" value="dbs20" class="peer sr-only">
+              <div class="opt-card h-full rounded-xl border border-slate-700 bg-slate-800/60 p-4 hover:border-slate-500 peer-checked:border-brand-500 peer-checked:bg-brand-700/15 peer-checked:ring-2 peer-checked:ring-brand-500/40 peer-focus-visible:ring-2 peer-focus-visible:ring-white/60">
+                <div class="flex items-start justify-between gap-2">
+                  <span class="text-sm font-bold text-white leading-tight">DBS · Máx. 20 códigos</span>
+                  <span class="shrink-0 px-1.5 py-0.5 rounded font-mono text-xs font-bold bg-slate-700 text-slate-200">DBS</span>
+                </div>
+                <p class="mt-2 text-xs text-slate-400 leading-snug">Cubicaje por volumen con máximo 20 códigos distintos por LPN.</p>
               </div>
             </label>
           </div>
@@ -952,12 +1007,17 @@ $('fPed').onchange=async e=>{const f=e.target.files[0];if(!f)return;
   }};
 
 // ---- Criterios por cliente y series de LPN ----
-const NP=p=>p==='20614043271'?7:6; // largo del correlativo: Saga = 7 dígitos (LPN de 18), el resto 6
+const NP=p=>(p==='20614043271'||p==='DBS')?7:6; // largo del correlativo: Saga = 7 dígitos (LPN de 18), DBS = 7 dígitos (DBS0000001), el resto 6
 const DIN={ripley12:1}; // criterios con prefijo escrito a mano (prefijo + Id LPN, ej. NC0019027); su serie se guarda por ese prefijo
 const dinPre=()=>$('pre').value.trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
-const PREF={aruma_vol:'TA',aruma_cl:'TA',inretail:'IP',saga:'20614043271',saga20:'20614043271'};
+const PREF={aruma_vol:'TA',aruma_cl:'TA',inretail:'IP',saga:'20614043271',saga20:'20614043271',tienda1000:'20614043271',dbs_vol:'DBS',dbs_cl:'DBS',dbs20:'DBS'};
 const AYUDA={
   volumen:'Llena cada LPN hasta el volumen máximo. Prefijo y correlativo libres.',
+  volumen20:'Por volumen · llena cada LPN hasta el volumen máximo con máximo 20 códigos distintos por LPN. Prefijo y correlativo libres.',
+  tienda1000:'Tienda 1000 (Saga) · un código por LPN (código por caja). Con «Cajas master completas» activo, cada caja master completa es 1 LPN. Un código con lotes distintos no comparte LPN. Serie 206140432710000001.',
+  dbs_vol:'DBS · por volumen. Serie DBS0000001.',
+  dbs_cl:'DBS · por código y lote (caja master y saldo). Serie DBS0000001.',
+  dbs20:'DBS · por volumen con máximo 20 códigos distintos por LPN. Serie DBS0000001.',
   codlote:'Por código y lote: 1 LPN por caja master completa y un LPN de saldo. Prefijo y correlativo libres.',
   aruma_vol:'Aruma · por volumen. Serie TA000001.',
   aruma_cl:'Aruma · por código y lote (caja master). Serie TA000001.',
@@ -974,7 +1034,7 @@ function aplicarModo(){
   const m=modo(),dyn=!!DIN[m];
   if(dyn&&$('pre').disabled){$('pre').value='';$('pre').disabled=false}
   const p=PREF[m]||(dyn?dinPre():'');
-  $('boxMaster').classList.toggle('hide',!(m==='inretail'||m==='saga'||m==='saga20'||m==='ripley12'));
+  $('boxMaster').classList.toggle('hide',!(m==='inretail'||m==='saga'||m==='saga20'||m==='ripley12'||m==='tienda1000'));
   $('metodoAyuda').textContent=AYUDA[m]||'';
   if(p){
     if(!dyn){if(!$('pre').disabled)PRE_LIBRE=$('pre').value;
@@ -1002,8 +1062,8 @@ function calcular(){
   const m0=modo(),fijo=PREF[m0]||(DIN[m0]?dinPre():'');
   if(DIN[m0]&&!fijo){alert('Escribe el prefijo + Id LPN de Ripley (ej. NC0019027).');return}
   const cap=num($('cap').value),pre=fijo||$('pre').value.trim(),E=1e-9;
-  const metodo=(m0==='codlote'||m0==='aruma_cl')?'codlote':(m0==='inretail')?'inretail':(m0==='saga'||m0==='saga20'||m0==='ripley12')?'saga':'volumen';
-  const maxCod=m0==='saga20'?20:m0==='ripley12'?12:0;
+  const metodo=(m0==='codlote'||m0==='aruma_cl'||m0==='dbs_cl')?'codlote':(m0==='inretail')?'inretail':(m0==='saga'||m0==='saga20'||m0==='ripley12'||m0==='tienda1000')?'saga':'volumen';
+  const maxCod=(m0==='saga20'||m0==='volumen20'||m0==='dbs20')?20:m0==='ripley12'?12:m0==='tienda1000'?1:0; // Tienda 1000: un código por LPN
   const capL=m0==='saga20'?cap*0.85:cap; // Saga 20: cada LPN se llena como máximo al 85% de la caja
   let ini=Math.max(1,parseInt($('ini').value)||1);
   LPNS=[];ERR=[];
@@ -1154,7 +1214,7 @@ function calcular(){
       const f=Math.max(1,num(r['FACTOR DE EMPAQUE'])||1);
       let u=num(r.CANTIDAD);const maxU=Math.floor((cap+E)/uv);let partido=false;
       while(u>0){
-        if(!cur)nuevo();
+        if(!cur||(maxCod&&!cur.lines.some(l=>l.code===code)&&new Set(cur.lines.map(l=>l.code)).size>=maxCod))nuevo(); // máx. de códigos distintos por LPN
         const fit=Math.floor((cap-cur.vol+E)/uv);
         if(fit>=u){cur.lines.push({r,code,units:u,vol:u*uv,parte:partido});cur.vol+=u*uv;u=0;break}
         if(maxU>=u&&cur.lines.length){nuevo();continue}
