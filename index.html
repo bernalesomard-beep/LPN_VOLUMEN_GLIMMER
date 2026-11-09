@@ -1010,14 +1010,14 @@ $('fPed').onchange=async e=>{const f=e.target.files[0];if(!f)return;
 const NP=p=>(p==='20614043271'||p==='DBS')?7:6; // largo del correlativo: Saga = 7 dígitos (LPN de 18), DBS = 7 dígitos (DBS0000001), el resto 6
 const DIN={ripley12:1}; // criterios con prefijo escrito a mano (prefijo + Id LPN, ej. NC0019027); su serie se guarda por ese prefijo
 const dinPre=()=>$('pre').value.trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
-const PREF={aruma_vol:'TA',aruma_cl:'TA',inretail:'IP',saga:'20614043271',saga20:'20614043271',tienda1000:'20614043271',dbs_vol:'DBS',dbs_cl:'DBS',dbs20:'DBS'};
+const PREF={aruma_vol:'TA',aruma_cl:'TA',inretail:'IP',saga:'20614043271',saga20:'20614043271',tienda1000:'20614043271'}; // DBS no usa serie: su LPN es OC-NN
 const AYUDA={
   volumen:'Llena cada LPN hasta el volumen máximo. Prefijo y correlativo libres.',
   volumen20:'Por volumen · llena cada LPN hasta el volumen máximo con máximo 20 códigos distintos por LPN. Prefijo y correlativo libres.',
   tienda1000:'Tienda 1000 (Saga) · un código por LPN (código por caja). Con «Cajas master completas» activo, cada caja master completa es 1 LPN. Un código con lotes distintos no comparte LPN. Serie 206140432710000001.',
-  dbs_vol:'DBS · por volumen. Serie DBS0000001.',
-  dbs_cl:'DBS · por código y lote (caja master y saldo). Serie DBS0000001.',
-  dbs20:'DBS · por volumen con máximo 20 códigos distintos por LPN. Serie DBS0000001.',
+  dbs_vol:'DBS · por volumen. El LPN se arma con la OC de OC-TIENDA DBS: OC-01, OC-02… (máx. 11 caracteres: OC de 8 + guion + 2 dígitos = hasta 99 cajas por OC).',
+  dbs_cl:'DBS · por código y lote (caja master y saldo). LPN = OC-NN (máx. 11 caracteres, hasta 99 cajas por OC).',
+  dbs20:'DBS · por volumen con máximo 20 códigos distintos por LPN. LPN = OC-NN (máx. 11 caracteres, hasta 99 cajas por OC).',
   codlote:'Por código y lote: 1 LPN por caja master completa y un LPN de saldo. Prefijo y correlativo libres.',
   aruma_vol:'Aruma · por volumen. Serie TA000001.',
   aruma_cl:'Aruma · por código y lote (caja master). Serie TA000001.',
@@ -1026,7 +1026,7 @@ const AYUDA={
   ripley12:'Ripley · mismas reglas de Saga con máximo 12 códigos distintos por LPN (cada LPN se llena al 100% del volumen de la caja). Escribe el prefijo + Id LPN (ej. NC0019027); el correlativo de 6 dígitos parte de 1 para cada Id LPN nuevo. LPN final: NC0019027000001.',
   saga20:'Saga · mismas reglas de Saga (volumen, un código con lotes distintos no comparte caja) y máximo 20 códigos distintos por LPN. Cada LPN se llena como máximo al 85% del volumen de la caja. Serie 206140432710000001.'
 };
-let LASTS={},PRE_LIBRE='',FIJO='';
+let LASTS={},PRE_LIBRE='',FIJO='',DBSOC=false; // DBSOC: el LPN es OC-NN (sin serie ni correlativo)
 const modo=()=>(document.querySelector('input[name="metodo"]:checked')||{}).value||'volumen';
 function memSer(){try{return JSON.parse(localStorage.getItem('lpn_series')||'{}')}catch(e){return {}}}
 function ultSerie(p){const m=memSer()[p];return Math.max(Number(LASTS[p])||0,m?Number(m.ultimo)||0:0)}
@@ -1036,6 +1036,9 @@ function aplicarModo(){
   const p=PREF[m]||(dyn?dinPre():'');
   $('boxMaster').classList.toggle('hide',!(m==='inretail'||m==='saga'||m==='saga20'||m==='ripley12'||m==='tienda1000'));
   $('metodoAyuda').textContent=AYUDA[m]||'';
+  if(m.startsWith('dbs')){ // DBS: LPN = OC-NN, sin prefijo ni correlativo
+    if(!$('pre').disabled)PRE_LIBRE=$('pre').value;$('pre').value='';$('pre').disabled=true;$('ini').value=1;
+    $('stCfg').innerHTML='DBS · el LPN se arma con la <strong class="text-brand-700 font-bold">OC</strong> de OC-TIENDA DBS + guion + n° de caja (ej. 21409799-01). Máx. 11 caracteres.';return}
   if(p){
     if(!dyn){if(!$('pre').disabled)PRE_LIBRE=$('pre').value;
     $('pre').value=p;$('pre').disabled=true}
@@ -1059,9 +1062,11 @@ function refresh(){
 }
 
 function calcular(){
-  const m0=modo(),fijo=PREF[m0]||(DIN[m0]?dinPre():'');
+  const m0=modo(),DBS=m0.startsWith('dbs'),fijo=DBS?'':(PREF[m0]||(DIN[m0]?dinPre():''));
   if(DIN[m0]&&!fijo){alert('Escribe el prefijo + Id LPN de Ripley (ej. NC0019027).');return}
-  const cap=num($('cap').value),pre=fijo||$('pre').value.trim(),E=1e-9;
+  DBSOC=DBS;
+  if(DBS&&!DS.oc_dbs.rows.length){alert('Carga primero la OC-TIENDA DBS (pestaña DBS > OC-Tienda DBS): el LPN se arma con la OC.');return}
+  const cap=num($('cap').value),pre=DBS?'':(fijo||$('pre').value.trim()),E=1e-9;
   const metodo=(m0==='codlote'||m0==='aruma_cl'||m0==='dbs_cl')?'codlote':(m0==='inretail')?'inretail':(m0==='saga'||m0==='saga20'||m0==='ripley12'||m0==='tienda1000')?'saga':'volumen';
   const maxCod=(m0==='saga20'||m0==='volumen20'||m0==='dbs20')?20:m0==='ripley12'?12:m0==='tienda1000'?1:0; // Tienda 1000: un código por LPN
   const capL=m0==='saga20'?cap*0.85:cap; // Saga 20: cada LPN se llena como máximo al 85% de la caja
@@ -1069,16 +1074,23 @@ function calcular(){
   LPNS=[];ERR=[];
   FIJO=fijo;PREUSO=pre;
   const refUlt=fijo?ultSerie(fijo):CFG.ultimo;
-  if((fijo||CFG.ok)&&ini<=refUlt){
+  if(!DBS&&(fijo||CFG.ok)&&ini<=refUlt){
     ERR.push('El primer LPN se ajustó a '+(refUlt+1)+' porque el último LPN registrado'+(fijo?' de la serie '+fijo:'')+' fue '+refUlt+'.');
     ini=refUlt+1;$('ini').value=ini;
   }
   let seq=ini;
   const orders=[];const idx={};
   PED.forEach(r=>{const k=String(r.ORDEN);if(!(k in idx)){idx[k]=orders.length;orders.push({k,rows:[]})}orders[idx[k]].rows.push(r)});
+  const cntOc={}; // DBS: contador de cajas por OC (varias órdenes con la misma OC siguen la misma numeración)
   orders.forEach(o=>{
-    const head=o.rows[0];let cur=null;
-    const nuevo=()=>{cur={orden:o.k,head,lpn:pre+String(seq++).padStart(NP(pre),'0'),lines:[],vol:0};LPNS.push(cur)};
+    const head=o.rows[0];let cur=null,oc='';
+    if(DBS){const f=DS.oc_dbs.rows.find(r=>nd(r[1])===nd(head.PEDIDO));oc=f?String(f[0]).replace(/[^A-Za-z0-9]/g,''):'';
+      if(!oc){ERR.push('Orden '+o.k+': el documento '+String(head.PEDIDO||'(vacío)')+' no tiene OC en OC-TIENDA DBS (omitida).');return}
+      if(oc.length>9){ERR.push('Orden '+o.k+': la OC '+oc+' tiene '+oc.length+' caracteres; con el guion y el n° de caja el LPN pasaría de 11 (omitida).');return}}
+    const nuevo=()=>{if(DBS){const n=(cntOc[oc]=(cntOc[oc]||0)+1),lp=oc+'-'+String(n).padStart(Math.min(2,10-oc.length),'0');
+        if(lp.length>11&&!cntOc['!'+oc]){cntOc['!'+oc]=1;ERR.push('La OC '+oc+' pasa de '+(Math.pow(10,10-oc.length)-1)+' cajas: el LPN supera los 11 caracteres y no se podrá guardar.')}
+        cur={orden:o.k,oc,head,lpn:lp,lines:[],vol:0}}
+      else cur={orden:o.k,head,lpn:pre+String(seq++).padStart(NP(pre),'0'),lines:[],vol:0};LPNS.push(cur)};
     if(metodo==='inretail'||metodo==='saga'){
       const masterOn=$('chkMaster').checked;
       const loteDe=r=>norm(r['LOTE CLIENTE']!==undefined?r['LOTE CLIENTE']:r.ALOT);
@@ -1226,7 +1238,7 @@ function calcular(){
       }
     });
   });
-  LPNS.forEach(l=>{const g=LPNS.filter(x=>x.orden===l.orden);l.of=g.length;l.n=g.indexOf(l)+1});
+  LPNS.forEach(l=>{const kk=l.oc||l.orden,g=LPNS.filter(x=>(x.oc||x.orden)===kk);l.of=g.length;l.n=g.indexOf(l)+1}); // DBS: caja n de N por OC
   PRIM=ini;ULT=seq-1;SAVED=false;
   render(cap);
 }
@@ -1965,6 +1977,7 @@ async function cargarConfig(){
 
 async function guardarHistorico(){
   if(!LPNS.length||!APPS_URL||!CFG.ok||SAVED)return;
+  if(DBSOC&&LPNS.some(l=>l.lpn.length>11)){alert('Hay LPN de más de 11 caracteres (una OC pasa del máximo de cajas). Revisa los avisos y vuelve a calcular.');return}
   const p=n=>String(n).padStart(2,'0'),t=new Date();
   const ts=t.getFullYear()+'-'+p(t.getMonth()+1)+'-'+p(t.getDate())+' '+p(t.getHours())+':'+p(t.getMinutes())+':'+p(t.getSeconds());
   const rows=[];
@@ -1975,15 +1988,18 @@ async function guardarHistorico(){
       T(r.ALM),T(r.UBIC),T(r.CHK),T(r.DESCRIPCION),T(r['COD.EAN']),num(r['FACTOR DE EMPAQUE'])||1,l.n,l.of])}));
   $('bHis').disabled=true;$('bHis').textContent='Guardando…';
   try{
-    const r=await fetch(APPS_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({rows,primerLpn:PRIM,ultimoLpn:ULT,prefijo:PREUSO,serie:!!FIJO})});
+    const r=await fetch(APPS_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({rows,primerLpn:PRIM,ultimoLpn:ULT,prefijo:PREUSO,serie:!!FIJO,porOc:DBSOC})});
     const d=await r.json();
     if(!d.ok){
       if(d.ultimos&&typeof d.ultimos==='object')Object.assign(LASTS,d.ultimos);
-      if(!FIJO&&d.ultimoLpn!==undefined){CFG.ultimo=Number(d.ultimoLpn)||CFG.ultimo;$('ini').value=CFG.ultimo+1}
+      if(!FIJO&&!DBSOC&&d.ultimoLpn!==undefined){CFG.ultimo=Number(d.ultimoLpn)||CFG.ultimo;$('ini').value=CFG.ultimo+1}
       throw new Error(d.error||'error desconocido');
     }
     SAVED=true;
-    if(FIJO){
+    if(DBSOC){
+      $('stCfg').innerHTML='<span class="text-emerald-700 font-bold">Guardado exitoso: '+d.guardadas+' filas en HISTORICO_LPN (LPN por OC).</span>';
+      $('connLabel').textContent='DBS guardado';
+    }else if(FIJO){
       const mem=memSer();mem[FIJO]={ultimo:ULT};
       try{localStorage.setItem('lpn_series',JSON.stringify(mem))}catch(e){}
       LASTS[FIJO]=ULT;$('ini').value=ULT+1;
@@ -2002,7 +2018,8 @@ async function guardarHistorico(){
   render(num($('cap').value));
 }
 
-$('bCalc').onclick=calcular;$('bPdf').onclick=()=>pdf();$('bXls').onclick=xls;$('bDet').onclick=detalle;$('bEmp').onclick=resumenEmpaque;$('bPla').onclick=plantilla;$('bHis').onclick=guardarHistorico;
+$('bCalc').onclick=async()=>{if(modo().startsWith('dbs')&&APPS_URL&&!DS.oc_dbs.rows.length)await dsCargar('oc_dbs'); // DBS necesita la OC-TIENDA DBS
+  calcular()};$('bPdf').onclick=()=>pdf();$('bXls').onclick=xls;$('bDet').onclick=detalle;$('bEmp').onclick=resumenEmpaque;$('bPla').onclick=plantilla;$('bHis').onclick=guardarHistorico;
 
 // ---- Catálogo y OC-Tienda (hojas CATALOGO y OC-TIENDA del Sheet) ----
 const DS={
@@ -2032,7 +2049,7 @@ async function dsArchivo(k,f){if(!f)return;const d=DS[k];
  try{const wb=XLSX.read(await f.arrayBuffer(),{type:'array'}),ws=wb.Sheets[wb.SheetNames[0]];
   const filas=XLSX.utils.sheet_to_json(ws,{defval:'',raw:false});
   d.rows=filas.map(o=>d.cols.map(c=>{const m=Object.keys(o).find(x=>x.trim().toLowerCase()===c.toLowerCase());let v=m===undefined?'':String(o[m]).trim();
-   if(c==='Precio unitario'&&v!==''&&!isNaN(parseFloat(v)))v=(Math.round(parseFloat(v)*100)/100).toFixed(2);return v})).filter(r=>r[0]!=='');
+   if(c==='Precio unitario'&&v!==''&&!isNaN(parseFloat(v)))v=(Math.round(parseFloat(v)*100)/100).toFixed(2);if(k==='oc_dbs'&&c==='ORDEN DE COMPRA')v=v.replace(/[^A-Za-z0-9]/g,'');return v})).filter(r=>r[0]!=='');
   $('ds'+k+'Sube').disabled=!d.rows.length;dsRender(k);dsMsg(k,d.rows.length+' filas leídas de '+f.name+'. Revisa y pulsa "Guardar en el Sheet".')}
  catch(e){dsMsg(k,'No se pudo leer el archivo: '+e.message,true)}}
 async function dsSube(k){const d=DS[k];$('ds'+k+'Sube').disabled=true;dsMsg(k,'Guardando...');
@@ -2392,10 +2409,98 @@ $('rpBuscar').onclick=rpBuscar;$('rpPdf').onclick=()=>rpDoc().save('ROTULOS_PALE
 $('view-rotp').addEventListener('input',e=>{const t=e.target;if(t.classList.contains('rpin'))RS.rp.M[t.dataset.g][t.dataset.f]=t.value});
 grupo('ripley',[['view-lpnr','LPN Ripley (rótulo)','lrDesde'],['view-detr','Detalle LPN Ripley','drDesde'],['view-dprec','Detalle etiqueta precio','dpDesde'],['view-rotp','Rótulos paleta','rpDesde'],['view-datosr','Catálogo y OC-Tienda Ripley',null,()=>{if(APPS_URL&&!DS.oc_ripley.rows.length&&!DS.cat_ripley.rows.length){dsCargar('cat_ripley');dsCargar('oc_ripley')}}]]);
 
+// ---- DBS: etiqueta por LPN (100 × 64 mm), rótulo de paleta y OC-TIENDA DBS. El LPN es OC-NN (máx. 11 caracteres) ----
+DS.oc_dbs={t:'OC - Tienda DBS (la OC arma el LPN: OC-01, OC-02…; cód. tienda, ID de cita y fecha editables)',cols:['ORDEN DE COMPRA','DOCUMENTO','COD TIENDA','TIENDA DESTINO','ID DE CITA','FECHA DE ENTREGA'],ed:[2,3,4,5],rows:[]};
+let DBPROV='SHEGLAM'; // proveedor que sale en la etiqueta y el rótulo DBS (editable)
+const dbProvIn=id=>`<label class="flex items-center gap-1 text-xs text-slate-600">Proveedor<input id="${id}" list="dbProvLista" value="${DBPROV}" class="border border-slate-200 rounded-lg px-2 py-2 text-sm w-44"></label>`;
+const DB_OC=l=>{const m=String(l.lpn).match(/^(.+)-(\d+)$/);return m?{oc:m[1],n:+m[2]}:null};
+async function dbBajar(p){const c=$(p+'Campo').value,d=$(p+'Desde').value.trim(),h=$(p+'Hasta').value.trim()||d;
+ if(!d||isNaN(+d)||isNaN(+h))throw new Error('Escribe un número válido en Desde (y Hasta si es rango).');
+ const [j,oc]=await Promise.all([q2('historico&campo='+encodeURIComponent(c)+'&desde='+encodeURIComponent(d)+'&hasta='+encodeURIComponent(h)),q2('oc_dbs')]);
+ if(!j.rows.length)throw new Error('No se encontraron pedidos en ese rango.');
+ const G={},L=[];let ign=0;
+ reconstruir(j.header,j.rows).forEach(l=>{const x=DB_OC(l);if(!x){ign++;return}l.oc=x.oc;l.num=x.n;L.push(l);
+  const g=G[x.oc]=G[x.oc]||{oc:x.oc,docs:[],t:'',n:0,ok:false,lpns:[]};g.n++;g.lpns.push(l.lpn);
+  const doc=String(l.head.PEDIDO||'').trim();if(doc&&!g.docs.includes(doc)){g.docs.push(doc);
+   const f=oc.rows.find(r=>nd(r[1])===nd(doc));if(f){g.ok=true;if(!g.t)g.t=(String(f[3]||'').replace(/^\s*DBS\s+/i,'').trim())||String(f[2]||'').trim()}}
+  if(!g.t)g.t=String(l.head.HSHIP||'').trim()});
+ if(!L.length)throw new Error('Ese rango no tiene LPN de DBS (formato OC-NN).');
+ L.sort((a,b)=>a.oc<b.oc?-1:a.oc>b.oc?1:a.num-b.num);Object.values(G).forEach(g=>g.lpns.sort());
+ return {L,G,ign}}
+const dbTh=c=>`<th class="text-left py-2 px-2 text-slate-500">${c}</th>`;
+// --- Etiqueta DBS ---
+let DBE={L:[],G:{}};
+async function dbeBuscar(){stMsg('dbe','Consultando...');
+ try{const {L,G,ign}=await dbBajar('dbe');DBE={L,G};
+  $('dbeT').innerHTML='<table class="w-full text-xs"><thead><tr>'+['O. Compra','Documento(s)','Tienda','Cajas (bultos)','OC-TIENDA DBS'].map(dbTh).join('')+'</tr></thead><tbody>'+
+   Object.keys(G).map(k=>{const g=G[k];return `<tr class="border-t border-slate-100"><td class="px-2 py-1.5 font-mono">${esc(g.oc)}</td><td class="px-2">${esc(g.docs.join(', '))}</td><td class="px-1"><input data-g="${esc(k)}" value="${esc(g.t)}" class="dbein border border-slate-300 rounded px-2 py-1 w-24"></td><td class="px-2">${g.n}</td><td class="px-2 ${g.ok?'text-emerald-700':'text-rose-600'}">${g.ok?'Sí':'No está'}</td></tr>`}).join('')+'</tbody></table>';
+  ['dbePdf','dbePrev'].forEach(i=>$(i).disabled=false);
+  const sin=Object.values(G).filter(g=>!g.ok).length;
+  stMsg('dbe',L.length+' etiqueta(s) en '+Object.keys(G).length+' OC.'+(ign?' '+ign+' LPN sin formato OC-NN se ignoraron.':'')+(sin?' '+sin+' OC sin datos en OC-TIENDA DBS: revisa la tienda a mano.':''),!!sin)}
+ catch(e){stMsg('dbe','Error: '+e.message,true)}}
+function dbEtq(doc,l,g){
+ const W=100,H=64,DOT=0.125;doc.setTextColor(0);doc.setDrawColor(0);doc.setLineWidth(0.4);doc.rect(1.5,1.5,W-3,H-3);
+ const fit=(t,fs,mx)=>{doc.setFontSize(fs);while(fs>7&&doc.getTextWidth(t)>mx){fs-=.5;doc.setFontSize(fs)}};
+ [['Nombre de proveedor: ',DBPROV,11],['N° OC: ',g.oc,21],['Tienda: ',g.t,31]].forEach(f=>{
+  doc.setFont('helvetica','normal');doc.setFontSize(13);doc.text(f[0],5,f[2]);const x=5+doc.getTextWidth(f[0]);
+  const v=String(f[1]==null?'':f[1]);fit(v,13,W-x-5);doc.text(v,x,f[2])});
+ const b=code128(l.lpn),m=b.reduce((a,c)=>a+c,0),md=Math.min(0.5,Math.max(DOT,Math.floor((W-12)/m/DOT)*DOT));let x=Math.round(((W-m*md)/2)/DOT)*DOT;
+ b.forEach((a,i)=>{if(i%2===0)doc.rect(x,36.5,a*md,17.5,'F');x+=a*md});
+ doc.setFont('helvetica','normal');doc.setFontSize(13);doc.text(String(l.lpn),W/2,59.5,{align:'center'})}
+function dbeDoc(){const {jsPDF}=window.jspdf,doc=new jsPDF({orientation:'landscape',unit:'mm',format:[100,64]});
+ DBE.L.forEach((l,i)=>{if(i)doc.addPage([100,64],'landscape');dbEtq(doc,l,DBE.G[l.oc])});return doc}
+// --- Rótulo de paleta DBS: eliges qué OC van en la paleta y se arma un rótulo A4 con sus LPN (20 por hoja) ---
+let DQP={L:[],G:{},sel:new Set()};
+async function dqpBuscar(){stMsg('dqp','Consultando...');
+ try{const {L,G,ign}=await dbBajar('dqp');DQP={L,G,sel:new Set()};dqpRender();
+  stMsg('dqp',L.length+' LPN en '+Object.keys(G).length+' OC. Marca las OC que van en la paleta.'+(ign?' '+ign+' LPN sin formato OC-NN se ignoraron.':''))}
+ catch(e){stMsg('dqp','Error: '+e.message,true)}}
+function dqpRender(){const G=DQP.G;
+ $('dqpT').innerHTML='<table class="w-full text-xs"><thead><tr><th class="py-2 px-2"><input type="checkbox" id="dqpAll" title="Marcar todas"></th>'+['O. Compra','Documento(s)','Tienda','Cajas'].map(dbTh).join('')+'</tr></thead><tbody>'+
+  Object.keys(G).map(k=>{const g=G[k];return `<tr class="border-t border-slate-100"><td class="px-2 py-1.5"><input type="checkbox" class="dqpck" data-g="${esc(k)}" ${DQP.sel.has(k)?'checked':''}></td><td class="px-2 font-mono">${esc(g.oc)}</td><td class="px-2">${esc(g.docs.join(', '))}</td><td class="px-2">${esc(g.t)}</td><td class="px-2">${g.n}</td></tr>`}).join('')+'</tbody></table>';
+ dqpEstado()}
+function dqpEstado(){const n=DQP.sel.size,cj=[...DQP.sel].reduce((a,k)=>a+DQP.G[k].n,0);['dqpPdf','dqpPrev'].forEach(i=>$(i).disabled=!n);
+ $('dqpSel').textContent=n?n+' OC marcada(s) · '+cj+' caja(s) · '+Math.ceil(cj/20)+' hoja(s) A4':'Ninguna OC marcada'}
+function dqpPag(doc,P,p,np,ls){const x0=15,x1=100,x2=110,x3=132,xe=195,y0=7,ys=[7,14,22,30,42,49],PT=24,yf=49+PT*10,cm=(a,b)=>(a+b)/2;
+ doc.setTextColor(0);doc.setDrawColor(0);doc.setFont('helvetica','bold');doc.setLineWidth(0.4);
+ doc.rect(x0,y0,xe-x0,yf-y0);ys.slice(1).forEach(y=>doc.line(x0,y,xe,y));
+ doc.line(x1,y0,x1,42);doc.line(x2,22,x2,30);doc.line(x3,22,x3,30);
+ const tx=(t,x,y,fs,al,mx)=>{doc.setFontSize(fs);t=String(t);if(mx)t=ajustar(doc,t,fs,mx,5);doc.text(t,x,y,{align:al||'left'})};
+ tx('PROVEEDOR',x0+1.5,12,9);tx(DBPROV,cm(x1,xe),12,13,'center',xe-x1-4);
+ tx('PALETA',x0+1.5,19.6,9);tx(P.m?P.n+'  DE  '+P.m:P.n,cm(x1,xe),19.9,15,'center');
+ tx('Cant. OC',x0+1.5,27.6,9);tx(P.ocs.length,cm(x1,x2),27.8,12,'center');tx('Cant. Cajas',cm(x2,x3),27.6,8,'center',x3-x2-2);tx(P.ls.length,cm(x3,xe),27.8,12,'center');
+ tx('ORDENES DE COMPRA',x0+1.5,36.2,8,'left',x1-x0-3);
+ const tot=P.ocs.map(o=>o.oc+' ('+o.n+')').join('   ');doc.setFontSize(8.5);const lin=doc.splitTextToSize(tot,xe-x1-4).slice(0,3);doc.text(lin,x1+2,33.2);
+ tx('LPN',cm(x0,x1),46.6,8,'center');tx('LPN',cm(x2,xe),46.6,8,'center');if(np>1)tx('Hoja '+p+' de '+np,xe-2,46.6,8,'right');
+ for(let i=0;i<10;i++){const yt=49+PT*i;doc.line(x0,yt+18.5,xe,yt+18.5);if(i<9)doc.line(x0,yt+PT,xe,yt+PT)}
+ doc.line(x1,42,x1,yf);doc.line(x2,42,x2,yf);
+ ls.forEach((lpn,j)=>{const c=j<10?0:1,i=j%10,yt=49+PT*i,xa=c?x2:x0,xb=c?xe:x1,b=code128(lpn),m2=b.reduce((a,v)=>a+v,0),md=Math.min(0.4,(xb-xa-8)/m2);let x=cm(xa,xb)-m2*md/2;
+  b.forEach((a,k)=>{if(k%2===0)doc.rect(x,yt+3,a*md,12.5,'F');x+=a*md});tx(lpn,cm(xa,xb),yt+18.5+3.9,8.5,'center')})}
+function dqpDoc(){const {jsPDF}=window.jspdf,doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+ const ks=Object.keys(DQP.G).filter(k=>DQP.sel.has(k)),ocs=ks.map(k=>DQP.G[k]),ls=[].concat(...ocs.map(g=>g.lpns)),
+  P={n:parseInt($('dqpNum').value)||1,m:parseInt($('dqpTot').value)||'',ocs,ls},np=Math.max(1,Math.ceil(ls.length/20));
+ for(let p=0;p<np;p++){if(p)doc.addPage('a4','portrait');dqpPag(doc,P,p+1,np,ls.slice(p*20,p*20+20))}return doc}
+$('view-ripley').after(Object.assign(document.createElement('div'),{id:'view-dbse',className:'hide space-y-6',innerHTML:busBox('dbe','Etiqueta DBS (100 × 64 mm)',dbProvIn('dbeProv')+'<datalist id="dbProvLista"><option value="SHEGLAM"><option value="DBS"><option value="Inter Andina JGBL S.A.C"></datalist>'+bx('dbePdf','Etiquetas PDF')+bx('dbePrev','Vista previa'))}));
+$('view-dbse').after(Object.assign(document.createElement('div'),{id:'view-dbsp',className:'hide space-y-6',innerHTML:busBox('dqp','Rótulo de paleta DBS (hoja A4, 20 LPN por hoja)',
+ dbProvIn('dqpProv')+'<label class="flex items-center gap-1 text-xs text-slate-600">Paleta N°<input id="dqpNum" type="number" min="1" value="1" class="border border-slate-200 rounded-lg px-2 py-2 text-sm w-16"></label><label class="flex items-center gap-1 text-xs text-slate-600">de<input id="dqpTot" type="number" min="1" placeholder="total" class="border border-slate-200 rounded-lg px-2 py-2 text-sm w-16"></label>'+bx('dqpPdf','Rótulo PDF')+bx('dqpPrev','Vista previa')+'<span id="dqpSel" class="text-xs font-semibold text-slate-600"></span>')}));
+$('view-dbsp').after(Object.assign(document.createElement('div'),{id:'view-dbsoc',className:'hide space-y-6',innerHTML:dsBox('oc_dbs')}));
+$('dsoc_dbsCargar').onclick=()=>dsCargar('oc_dbs');$('dsoc_dbsFile').onchange=e=>dsArchivo('oc_dbs',e.target.files[0]);$('dsoc_dbsSube').onclick=()=>dsSube('oc_dbs');$('dsoc_dbsQ').oninput=()=>dsRender('oc_dbs');
+$('view-dbsoc').addEventListener('input',e=>{const t=e.target;if(!t.classList.contains('dsin'))return;DS[t.dataset.k].rows[+t.dataset.i][+t.dataset.j]=t.value;$('ds'+t.dataset.k+'Sube').disabled=false});
+['dbeProv','dqpProv'].forEach(id=>$(id).oninput=e=>{DBPROV=e.target.value.trim()||'SHEGLAM';['dbeProv','dqpProv'].forEach(o=>{if(o!==id)$(o).value=e.target.value})});
+$('dbeBuscar').onclick=dbeBuscar;$('dbePdf').onclick=()=>dbeDoc().save('ETIQUETAS_DBS.pdf');$('dbePrev').onclick=()=>window.open(dbeDoc().output('bloburl'));
+$('view-dbse').addEventListener('input',e=>{const t=e.target;if(t.classList.contains('dbein'))DBE.G[t.dataset.g].t=t.value});
+$('dqpBuscar').onclick=dqpBuscar;$('dqpPdf').onclick=()=>dqpDoc().save('ROTULO_PALETA_DBS_'+($('dqpNum').value||1)+'.pdf');$('dqpPrev').onclick=()=>window.open(dqpDoc().output('bloburl'));
+$('view-dbsp').addEventListener('change',e=>{const t=e.target;
+ if(t.id==='dqpAll'){DQP.sel=t.checked?new Set(Object.keys(DQP.G)):new Set();dqpRender()}
+ else if(t.classList.contains('dqpck')){t.checked?DQP.sel.add(t.dataset.g):DQP.sel.delete(t.dataset.g);dqpEstado()}});
+grupo('dbs',[['view-dbse','Etiqueta DBS','dbeDesde'],['view-dbsp','Rótulo de paleta','dqpDesde'],['view-dbsoc','OC-Tienda DBS',null,()=>{if(APPS_URL&&!DS.oc_dbs.rows.length)dsCargar('oc_dbs')}]]);
+$('tabRipley').insertAdjacentHTML('afterend','<button id="tabDbs" type="button" role="tab" aria-selected="false" class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-t-lg border border-b-0 -mb-px border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100"><i data-lucide="package" class="w-4 h-4"></i> DBS</button>');
+$('tabDbs').onclick=()=>showTab('dbs');
+
 function showTab(t){
   const LEG={regenerar:['pedidos','view-regenerar'],etiquetas:['pedidos','view-etiquetas'],detalle:['pedidos','view-det'],empaque:['pedidos','view-emp'],imd:['saga','view-imd']};
   if(LEG[t]){showTab(LEG[t][0]);SUBSEL[LEG[t][0]](LEG[t][1]);return}
-  const T=[['tabDivision','division','view-division',null],['tabPedidos','pedidos','view-pedidos',null],['tabSaga','saga','view-saga',null],['tabRipley','ripley','view-ripley',null],['tabMaestra','maestra','view-maestra',null]];
+  const T=[['tabDivision','division','view-division',null],['tabPedidos','pedidos','view-pedidos',null],['tabSaga','saga','view-saga',null],['tabRipley','ripley','view-ripley',null],['tabDbs','dbs','view-dbs',null],['tabMaestra','maestra','view-maestra',null]];
   const on='border-slate-200 bg-white text-slate-900',off='border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100';
   T.forEach(([id,k,vw,foco])=>{
     const act=k===t;$(vw).classList.toggle('hide',!act);
