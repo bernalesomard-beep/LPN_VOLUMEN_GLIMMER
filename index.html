@@ -1744,6 +1744,8 @@ pintarLogo();
 
 function dibujarEtiqueta(doc,l,o){
   const W=100,H=64,mx=4,h=l.head;
+  // variante con código (Aruma): las filas se compactan para que entre CÓDIGO antes del código de barras
+  const Y=o.codigo?{c1:11,c2:8,b:18.2,d:25.4,k:32.6,bar:35.5,bh:10.5}:{c1:14,c2:9.5,b:21.5,d:29,bar:33.5,bh:11.5};
   let cli=String(h.CLIENTE==null?'':h.CLIENTE).trim().replace(/\s+/g,' ');
   if(o.sinSA)cli=cli.replace(/[\s,]+(S\.?\s?A\.?\s?C\.?|S\.?\s?A\.?|S\.?\s?R\.?\s?L\.?|E\.?\s?I\.?\s?R\.?\s?L\.?)\s*$/i,'').trim();
   const und=l.lines.reduce((a,x)=>a+x.units,0);
@@ -1764,19 +1766,20 @@ function dibujarEtiqueta(doc,l,o){
     const x=mx+doc.getTextWidth(rot)+2,disp=W-mx-x;
     let fs=19;doc.setFontSize(fs);
     while(fs>12&&doc.getTextWidth(cli)>disp){fs-=0.5;doc.setFontSize(fs)}
-    if(doc.getTextWidth(cli)<=disp){doc.setFontSize(15);doc.text(rot,mx,14);doc.setFontSize(fs);doc.text(cli,x,14);return}
+    if(doc.getTextWidth(cli)<=disp){doc.setFontSize(15);doc.text(rot,mx,Y.c1);doc.setFontSize(fs);doc.text(cli,x,Y.c1);return}
     let f2=14,ls=[];
     for(;f2>=8;f2-=0.5){doc.setFontSize(f2);ls=ajusta(cli,disp);if(ls.length<=2)break}
-    doc.setFontSize(15);doc.text(rot,mx,9.5);doc.setFontSize(f2);
-    ls.slice(0,2).forEach((t,i)=>doc.text(t,x,9.5+i*5));
+    doc.setFontSize(15);doc.text(rot,mx,Y.c2);doc.setFontSize(f2);
+    ls.slice(0,2).forEach((t,i)=>doc.text(t,x,Y.c2+i*5));
   })();
-  fila(21.5,'BPCS:',String(h.ORDEN),21);
-  fila(29,'DOCUMENTO:',String(h.PEDIDO),21);
+  fila(Y.b,'BPCS:',String(h.ORDEN),21);
+  fila(Y.d,'DOCUMENTO:',String(h.PEDIDO),21);
+  if(o.codigo){const cs=[...new Set(l.lines.map(x=>String(x.code).trim()))];fila(Y.k,'CODIGO:',cs.length===1?cs[0]:'VARIOS ('+cs.length+')',21)}
   // código de barras Code 128 centrado
   const bars=code128(l.lpn),mods=bars.reduce((a,b)=>a+b,0);
   const mod=Math.min(o.mod,(W-2*mx-2)/mods);   // el ancho de módulo nunca baja de lo pedido salvo que no quepa
   const bw=mods*mod;let x=(W-bw)/2;
-  bars.forEach((a,i)=>{if(i%2===0)doc.rect(x,33.5,a*mod,11.5,'F');x+=a*mod});
+  bars.forEach((a,i)=>{if(i%2===0)doc.rect(x,Y.bar,a*mod,Y.bh,'F');x+=a*mod});
   doc.setFont('helvetica','bold');doc.setFontSize(20);doc.text(String(l.lpn),W/2,52,{align:'center'});
   // esquina inferior izquierda: logo o texto de marca
   if(LOGO&&LOGO.data){
@@ -1791,10 +1794,10 @@ function dibujarEtiqueta(doc,l,o){
   const uw=doc.getTextWidth('UND');doc.text('UND',W-mx,61,{align:'right'});
   doc.setFontSize(28);doc.text(undTxt,W-mx-uw-2,61,{align:'right'});
 }
-function etiquetasDoc(L){
+function etiquetasDoc(L,conCodigo){
   const {jsPDF}=window.jspdf;
   const doc=new jsPDF({orientation:'landscape',unit:'mm',format:[100,64]});
-  const o={mod:parseFloat($('etqMod').value)||0.5,sinSA:$('etqSinSA').checked};
+  const o={mod:parseFloat($('etqMod').value)||0.5,sinSA:$('etqSinSA').checked,codigo:!!conCodigo};
   L.forEach((l,i)=>{if(i>0)doc.addPage([100,64],'landscape');dibujarEtiqueta(doc,l,o)});
   return doc;
 }
@@ -2216,7 +2219,192 @@ function grupo(key,subs){const v=document.createElement('div');v.id='view-'+key;
   const x=subs.find(y=>y[0]===id);if(x&&x[3])x[3]()};
  v.querySelectorAll('.sub-btn').forEach(b=>b.onclick=()=>{sel(b.dataset.sub);const x=subs.find(y=>y[0]===b.dataset.sub);if(x[2]&&$(x[2]))$(x[2]).focus()});
  SUBSEL[key]=sel;sel(subs[0][0])}
-grupo('pedidos',[['view-regenerar','Reimpresión desde histórico','regDesde'],['view-etiquetas','Impresión de LPN','etqDesde'],['view-det','Detalle de pedido','detDesde'],['view-emp','Resumen de empaque','empDesde']]);
+// ================== PEDIDOS: Impresión LPN Aruma · Detalle sin LPN · Histórico editable ==================
+const SEC='bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4';
+const THc='text-left py-2 px-2 text-slate-500';
+const fmtN=n=>Number.isInteger(n)?String(n):String(+Number(n).toFixed(2));
+const nuevaVista=(id,html)=>{const v=document.createElement('div');v.id=id;v.className='hide space-y-6';v.innerHTML=html;$('view-emp').after(v);return v};
+
+// ---------- 1) Impresión LPN Aruma: igual que Impresión de LPN pero la etiqueta lleva el código ----------
+(function(){
+  nuevaVista('view-arum',busBox('ar','Impresión LPN Aruma (100 × 64 mm, con código del producto)',bx('arPdf','Etiquetas PDF')+bx('arPrev','Vista previa'))+
+    '<iframe id="arFrame" class="hide w-full border border-slate-200 rounded-lg" style="height:420px"></iframe>');
+  let L=[];
+  const sel=()=>L.filter((l,i)=>{const c=document.querySelector('input[data-ar="'+i+'"]');return c?c.checked:true});
+  const cuenta=()=>{const n=sel().length;$('arPdf').textContent='Etiquetas PDF ('+n+')';$('arPdf').disabled=$('arPrev').disabled=!n;const t=$('arTodos');if(t)t.checked=n===L.length};
+  $('arBuscar').onclick=async()=>{
+    L=[];$('arT').innerHTML='';$('arFrame').classList.add('hide');cuenta();stMsg('ar','Consultando base histórica de pedidos...');
+    try{
+      if(!APPS_URL)throw new Error('Falta conectar el Sheet (APPS_URL vacía).');
+      const c=$('arCampo').value,d=$('arDesde').value.trim(),h=$('arHasta').value.trim()||d;
+      if(!d||isNaN(+d)||isNaN(+h))throw new Error('Escribe un número válido en Desde (y Hasta si es rango).');
+      const j=await q2('historico&campo='+encodeURIComponent(c)+'&desde='+encodeURIComponent(d)+'&hasta='+encodeURIComponent(h));
+      if(!j.rows.length)throw new Error('No se encontraron pedidos en ese rango.');
+      L=reconstruir(j.header,j.rows);
+      const multi=L.filter(l=>new Set(l.lines.map(x=>String(x.code).trim())).size>1).length;
+      const MAX=200;
+      $('arT').innerHTML='<table class="w-full text-xs"><thead><tr><th class="py-2 px-2 w-8"><input type="checkbox" id="arTodos" checked class="accent-red-600"></th>'+['LPN','BPCS (Orden)','Documento','Código','Cliente','Unidades'].map(x=>`<th class="${THc}">${x}</th>`).join('')+'</tr></thead><tbody class="divide-y divide-slate-100">'+
+        L.slice(0,MAX).map((l,i)=>{const cs=[...new Set(l.lines.map(x=>String(x.code).trim()))];
+          return `<tr><td class="px-2 py-1.5"><input type="checkbox" data-ar="${i}" checked class="accent-red-600"></td><td class="px-2 font-mono font-bold">${esc(l.lpn)}</td><td class="px-2 font-mono">${esc(l.head.ORDEN)}</td><td class="px-2 font-mono">${esc(l.head.PEDIDO)}</td><td class="px-2 font-mono ${cs.length>1?'text-amber-700 font-bold':''}">${esc(cs.length===1?cs[0]:'VARIOS ('+cs.length+')')}</td><td class="px-2 text-slate-600">${esc(l.head.CLIENTE)}</td><td class="px-2 text-right font-mono">${fmtN(l.lines.reduce((a,x)=>a+x.units,0))}</td></tr>`}).join('')+'</tbody></table>'+(L.length>MAX?'<p class="text-xs text-amber-700 p-2">Se muestran los primeros '+MAX+'; el PDF incluye todos los marcados.</p>':'');
+      $('arTodos').onchange=e=>{document.querySelectorAll('input[data-ar]').forEach(c=>c.checked=e.target.checked);cuenta()};
+      $('arT').onchange=e=>{if(e.target.dataset&&e.target.dataset.ar!==undefined)cuenta()};
+      stMsg('ar',L.length+' LPN encontrados.'+(multi?' '+multi+' tienen varios códigos: la etiqueta dirá VARIOS (n).':''),!!multi);
+    }catch(e){stMsg('ar','Error: '+e.message,true)}
+    cuenta();
+  };
+  $('arPdf').onclick=()=>{const S=sel();if(!S.length)return;const o=new Set(S.map(l=>l.orden));etiquetasDoc(S,true).save('ETIQUETAS_LPN_ARUMA_'+S[0].orden+(o.size>1?'_y_otros':'')+'.pdf')};
+  $('arPrev').onclick=()=>{const S=sel();if(!S.length)return;$('arFrame').classList.remove('hide');$('arFrame').src=etiquetasDoc([S[0]],true).output('bloburl')};
+})();
+
+// ---------- 2) Detalle de pedido sin LPN: se sube el pedido, no se divide ni se asigna LPN ----------
+(function(){
+  nuevaVista('view-slpn',`<section class="${SEC}"><h3 class="font-bold text-slate-900">Detalle de pedido sin LPN</h3>
+  <p class="text-xs text-slate-500">Sube el archivo del pedido (columnas ORDEN, PEDIDO, CLIENTE, PRODUCTO, CANTIDAD; opcionales DESCRIPCION, COD.EAN, LOTE CLIENTE, EXPIRA). No genera LPN ni división, y el PDF sale sin cabecera de LPN.</p>
+  <div class="flex flex-wrap gap-3 items-center">
+    <input id="slFile" type="file" accept=".xls,.xlsx,.csv" class="text-xs">
+    <select id="slTam" class="border border-slate-200 rounded-lg px-3 py-2 text-sm"><option value="eti">Etiqueta 100 × 64 mm</option><option value="a4">Hoja A4</option></select>
+    <label class="text-xs flex items-center gap-1.5"><input type="checkbox" id="slSum" class="accent-red-600"> Sumar lotes (una fila por código)</label>
+    ${bx('slPdf','Detalle PDF')}${bx('slPrev','Vista previa')}</div>
+  <p id="slSt" class="text-xs text-slate-500"></p><div id="slT" class="overflow-x-auto"></div>
+  <iframe id="slFrame" class="hide w-full border border-slate-200 rounded-lg" style="height:420px"></iframe></section>`);
+  let G=[];
+  const T=v=>String(v==null?'':v).replace(/\s+/g,' ').trim();
+  const sel=()=>G.filter((g,i)=>{const c=document.querySelector('input[data-sl="'+i+'"]');return c?c.checked:true});
+  const cuenta=()=>{const n=sel().length;$('slPdf').textContent='Detalle PDF ('+n+')';$('slPdf').disabled=$('slPrev').disabled=!n;const t=$('slTodos');if(t)t.checked=n===G.length};
+  function agrupar(rows,sum){
+    const m={},out=[];
+    rows.forEach(r=>{const k=T(r.ORDEN)+'|'+T(r.PEDIDO);
+      if(!m[k]){m[k]={orden:T(r.ORDEN),pedido:T(r.PEDIDO),cliente:T(r.CLIENTE),filas:[],idx:{},total:0};out.push(m[k])}
+      const g=m[k],cod=T(r.PRODUCTO),ean=T(r['COD.EAN']),lote=sum?'':T(r['LOTE CLIENTE']||r.LOTE),exp=sum?'':T(r.EXPIRA),kk=[cod,ean,lote,exp].join('|'),u=num(r.CANTIDAD);
+      if(!(kk in g.idx)){g.idx[kk]=g.filas.length;g.filas.push({cod,desc:T(r.DESCRIPCION),ean,lote,exp,u:0})}
+      g.filas[g.idx[kk]].u+=u;g.total+=u});
+    return out}
+  let RAW=[];
+  const pinta=()=>{
+    G=agrupar(RAW,$('slSum').checked);
+    $('slT').innerHTML=G.length?'<table class="w-full text-xs"><thead><tr><th class="py-2 px-2 w-8"><input type="checkbox" id="slTodos" checked class="accent-red-600"></th>'+['Orden','Pedido','Cliente','Códigos / filas','Unidades'].map(x=>`<th class="${THc}">${x}</th>`).join('')+'</tr></thead><tbody class="divide-y divide-slate-100">'+
+      G.map((g,i)=>`<tr><td class="px-2 py-1.5"><input type="checkbox" data-sl="${i}" checked class="accent-red-600"></td><td class="px-2 font-mono">${esc(g.orden)}</td><td class="px-2 font-mono font-bold">${esc(g.pedido)}</td><td class="px-2 text-slate-600">${esc(g.cliente)}</td><td class="px-2 font-mono">${g.filas.length}</td><td class="px-2 text-right font-mono">${fmtN(g.total)}</td></tr>`).join('')+'</tbody></table>':'';
+    if(G.length){$('slTodos').onchange=e=>{document.querySelectorAll('input[data-sl]').forEach(c=>c.checked=e.target.checked);cuenta()};$('slT').onchange=e=>{if(e.target.dataset&&e.target.dataset.sl!==undefined)cuenta()}}
+    cuenta()};
+  $('slFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;
+    try{const rows=await readSheet(f);
+      if(!rows.length)throw new Error('el archivo está vacío');
+      ['PRODUCTO','CANTIDAD'].forEach(c=>{if(!(c in rows[0]))throw new Error('falta la columna '+c)});
+      RAW=rows.filter(r=>norm(r.PRODUCTO)&&num(r.CANTIDAD)>0);
+      if(!RAW.length)throw new Error('no hay líneas con PRODUCTO y CANTIDAD > 0');
+      pinta();stMsg('sl',RAW.length+' líneas · '+G.length+' pedido(s) · '+fmtN(G.reduce((a,g)=>a+g.total,0))+' unidades.')}
+    catch(x){RAW=[];G=[];pinta();stMsg('sl','Error: '+x.message,true)}};
+  $('slSum').onchange=()=>{if(RAW.length)pinta()};
+  function pdf(S){
+    const {jsPDF}=window.jspdf,a4=$('slTam').value==='a4',sum=$('slSum').checked;
+    const W=a4?210:100,H=a4?297:64,doc=new jsPDF({orientation:a4?'portrait':'landscape',unit:'mm',format:[W,H]});
+    const fit=(t,fs,mx,mn)=>{doc.setFontSize(fs);while(fs>mn&&doc.getTextWidth(t)>mx){fs-=0.5;doc.setFontSize(fs)}return fs};
+    const cut=(t,mx)=>{while(t.length>1&&doc.getTextWidth(t)>mx)t=t.slice(0,-1);return t};
+    let primera=true;
+    S.forEach(g=>{
+      const PER=a4?44:26,np=Math.max(1,Math.ceil(g.filas.length/PER));
+      for(let p=0;p<np;p++){
+        if(!primera)doc.addPage([W,H],a4?'portrait':'landscape');primera=false;
+        doc.setTextColor(0);doc.setFont('helvetica','bold');
+        const rows=g.filas.slice(p*PER,(p+1)*PER);
+        if(a4){
+          doc.setFontSize(15);doc.text('Ped: '+g.pedido,12,16);doc.setFontSize(12);doc.text('Orden: '+g.orden,W-12,16,{align:'right'});
+          doc.setFont('helvetica','normal');fit('Cliente: '+g.cliente,10,W-24,7);doc.text('Cliente: '+g.cliente,12,23);
+          doc.setFont('helvetica','bold');doc.setFontSize(9);doc.text('Total: '+fmtN(g.total)+' und'+(np>1?'   ·   Hoja '+(p+1)+'/'+np:''),12,29);
+          const X={c:12,d:42,e:112,l:142,x:168,q:W-12};doc.setFontSize(8);
+          doc.text('CÓDIGO',X.c,36);doc.text('DESCRIPCIÓN',X.d,36);doc.text('EAN',X.e,36);if(!sum){doc.text('LOTE',X.l,36);doc.text('EXPIRA',X.x,36)}doc.text('CANT.',X.q,36,{align:'right'});
+          doc.setLineWidth(0.3);doc.line(12,37.5,W-12,37.5);doc.setFont('helvetica','normal');doc.setFontSize(8);
+          rows.forEach((r,i)=>{const y=43+i*5.4;doc.text(cut(r.cod,28),X.c,y);doc.text(cut(r.desc,68),X.d,y);doc.text(r.ean,X.e,y);if(!sum){doc.text(cut(r.lote,24),X.l,y);doc.text(cut(r.exp,20),X.x,y)}doc.text(fmtN(r.u),X.q,y,{align:'right'})});
+        }else{
+          doc.setFontSize(10);fit('Ped: '+g.pedido,11,52,8);doc.text('Ped: '+g.pedido,3.5,4.6);
+          doc.setFontSize(9);doc.text('Total: '+fmtN(g.total)+' und',W-3.5,4.6,{align:'right'});
+          doc.setFontSize(10);fit('Orden: '+g.orden,11,46,8);doc.text('Orden: '+g.orden,3.5,9.4);
+          if(np>1){doc.setFontSize(8);doc.text('Hoja '+(p+1)+'/'+np,W-3.5,9.4,{align:'right'})}
+          doc.setFont('helvetica','normal');const cl='Cliente: '+g.cliente;fit(cl,8.5,W-8,6);doc.text(cl,4,13.4);
+          doc.setFont('helvetica','bold');doc.setFontSize(5);doc.text('CÓDIGO',4.6,15.8);doc.text('EAN',32,15.8);if(!sum)doc.text('LOTE',56,15.8);doc.text('CANT.',W-4,15.8,{align:'right'});
+          doc.setFont('helvetica','normal');doc.setFontSize(5.6);
+          rows.forEach((r,i)=>{const y=17.9+i*1.7;doc.text(cut(r.cod,26),4.6,y);doc.text(r.ean,32,y);if(!sum)doc.text(cut(r.lote,22),56,y);doc.text(fmtN(r.u),W-4,y,{align:'right'})});
+        }
+      }
+    });
+    return doc}
+  $('slPdf').onclick=()=>{const S=sel();if(S.length)pdf(S).save('DETALLE_SIN_LPN_'+(S[0].pedido||S[0].orden||'pedido')+(S.length>1?'_y_otros':'')+'.pdf')};
+  $('slPrev').onclick=()=>{const S=sel();if(!S.length)return;$('slFrame').classList.remove('hide');$('slFrame').src=pdf([S[0]]).output('bloburl')};
+})();
+
+// ---------- 3) Detalle del histórico: filtrar, eliminar líneas o modificar cantidad (queda registro) ----------
+(function(){
+  const inp=(id,ph,w)=>`<input id="${id}" placeholder="${ph}" class="border border-slate-200 rounded-lg px-3 py-2 text-sm ${w||'w-28'}">`;
+  nuevaVista('view-hdet',`<section class="${SEC}"><h3 class="font-bold text-slate-900">Detalle del histórico · editar líneas</h3>
+  <p class="text-xs text-slate-500">Filtra por pedido, orden, LPN o código. Marca líneas para eliminarlas, o cambia la cantidad directamente en la fila. Todo cambio exige un motivo y queda en la hoja CAMBIOS_LPN.</p>
+  <div class="flex flex-wrap gap-2 items-center">${inp('hdP1','Pedido desde')}${inp('hdP2','Pedido hasta')}${inp('hdO1','Orden desde')}${inp('hdO2','Orden hasta')}${inp('hdLpn','LPN (contiene)','w-36')}${inp('hdCod','Código (contiene)','w-36')}
+  <button id="hdBuscar" type="button" class="px-3 py-2 text-sm font-semibold rounded-lg bg-slate-900 text-white">Buscar</button></div>
+  <div class="flex flex-wrap gap-2 items-center">${inp('hdUser','Tu nombre','w-36')}${inp('hdMotivo','Motivo del cambio (obligatorio)','w-72')}
+  ${bx('hdMod','Guardar cantidades modificadas')}<button id="hdDel" type="button" disabled class="px-3 py-2 text-sm font-semibold rounded-lg border border-rose-300 text-rose-700 hover:bg-rose-50 disabled:opacity-40">Eliminar seleccionadas</button></div>
+  <p id="hdSt" class="text-xs text-slate-500"></p><div id="hdT" class="overflow-x-auto"></div></section>`);
+  try{$('hdUser').value=localStorage.getItem('lpn_user')||''}catch(e){}
+  $('hdUser').oninput=()=>{try{localStorage.setItem('lpn_user',$('hdUser').value)}catch(e){}};
+  let R=[],H={};
+  const val=(r,c)=>r[H[c]];
+  const selIdx=()=>[...document.querySelectorAll('input[data-hd]:checked')].map(c=>+c.dataset.hd);
+  const modIdx=()=>[...document.querySelectorAll('input[data-hq]')].filter(c=>{const q=c.value.trim();return q!==''&&!isNaN(+q.replace(',','.'))&&num(q)!==num(val(R[+c.dataset.hq],'CANTIDAD'))}).map(c=>+c.dataset.hq);
+  const cuenta=()=>{const s=selIdx().length,m=modIdx().length;$('hdDel').textContent='Eliminar seleccionadas ('+s+')';$('hdDel').disabled=!s;$('hdMod').textContent='Guardar cantidades modificadas ('+m+')';$('hdMod').disabled=!m};
+  async function buscar(){
+    R=[];$('hdT').innerHTML='';cuenta();
+    try{
+      if(!APPS_URL)throw new Error('Falta conectar el Sheet (APPS_URL vacía).');
+      const v=id=>$(id).value.trim(),p=[];
+      [['pedDesde','hdP1'],['pedHasta','hdP2'],['ordDesde','hdO1'],['ordHasta','hdO2'],['lpn','hdLpn'],['codigo','hdCod']].forEach(x=>{if(v(x[1]))p.push(x[0]+'='+encodeURIComponent(v(x[1])))});
+      if(!p.length)throw new Error('Escribe al menos un filtro.');
+      stMsg('hd','Consultando...');
+      const j=await q2('hist_det&'+p.join('&'));H={};j.header.forEach((c,i)=>H[c]=i);R=j.rows;
+      if(!R.length){stMsg('hd','No hay líneas con esos filtros.');return}
+      const MAX=500;
+      $('hdT').innerHTML='<table class="w-full text-xs"><thead><tr><th class="py-2 px-2 w-8"><input type="checkbox" id="hdTodos" class="accent-red-600"></th>'+['Orden','Pedido','LPN','Código','Lote','Cantidad','Cliente'].map(x=>`<th class="${THc}">${x}</th>`).join('')+'</tr></thead><tbody class="divide-y divide-slate-100">'+
+        R.slice(0,MAX).map((r,i)=>`<tr><td class="px-2 py-1"><input type="checkbox" data-hd="${i}" class="accent-red-600"></td><td class="px-2 font-mono">${esc(val(r,'ORDEN'))}</td><td class="px-2 font-mono">${esc(val(r,'PEDIDO'))}</td><td class="px-2 font-mono font-bold">${esc(val(r,'LPN'))}</td><td class="px-2 font-mono">${esc(val(r,'CODIGO'))}</td><td class="px-2 font-mono">${esc(val(r,'LOTE'))}</td><td class="px-2"><input data-hq="${i}" value="${esc(val(r,'CANTIDAD'))}" class="border border-slate-300 rounded px-2 py-1 w-20 text-right font-mono"></td><td class="px-2 text-slate-600">${esc(val(r,'CLIENTE'))}</td></tr>`).join('')+'</tbody></table>';
+      $('hdTodos').onchange=e=>{document.querySelectorAll('input[data-hd]').forEach(c=>c.checked=e.target.checked);cuenta()};
+      $('hdT').oninput=$('hdT').onchange=e=>{if(e.target.dataset&&(e.target.dataset.hd!==undefined||e.target.dataset.hq!==undefined)){if(e.target.dataset.hq!==undefined)e.target.classList.toggle('bg-amber-100',modIdx().includes(+e.target.dataset.hq));cuenta()}};
+      const tot=+j.total||R.length;
+      stMsg('hd',tot+' línea(s)'+(tot>R.length?' (se traen las primeras '+R.length+'; afina el filtro)':'')+(R.length>MAX?' · se muestran '+MAX:'')+'.');
+      if(R.length>MAX)R=R.slice(0,MAX);
+    }catch(e){stMsg('hd','Error: '+e.message,true)}
+    cuenta()}
+  $('hdBuscar').onclick=buscar;
+  async function enviar(cambios,txt){
+    const motivo=$('hdMotivo').value.trim(),usuario=$('hdUser').value.trim();
+    if(!usuario){stMsg('hd','Escribe tu nombre.',true);return}
+    if(!motivo){stMsg('hd','El motivo del cambio es obligatorio.',true);return}
+    if(!confirm(txt))return;
+    stMsg('hd','Guardando...');
+    try{const j=await (await fetch(APPS_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'hist_edit',usuario,motivo,cambios})})).json();
+      if(!j.ok)throw new Error(j.error);
+      await buscar();stMsg('hd','Listo: '+j.aplicados+' cambio(s) aplicado(s) y registrado(s).')}
+    catch(e){stMsg('hd','No se aplicó: '+e.message,true)}}
+  const base=i=>({fila:+val(R[i],'FILA'),lpn:val(R[i],'LPN'),codigo:val(R[i],'CODIGO'),cantidadAntes:num(val(R[i],'CANTIDAD'))});
+  $('hdDel').onclick=()=>{const s=selIdx();if(s.length)enviar(s.map(i=>({...base(i),op:'eliminar'})),'¿Eliminar '+s.length+' línea(s) del histórico? Esta acción queda registrada.')};
+  $('hdMod').onclick=()=>{const m=modIdx();if(m.length)enviar(m.map(i=>({...base(i),op:'cantidad',cantidad:num(document.querySelector('input[data-hq="'+i+'"]').value)})),'¿Modificar la cantidad de '+m.length+' línea(s)?')};
+})();
+
+// ---------- 4) Historial de cambios ----------
+(function(){
+  nuevaVista('view-hcamb',`<section class="${SEC}"><h3 class="font-bold text-slate-900">Historial de cambios del histórico</h3>
+  <div class="flex flex-wrap gap-2 items-center"><input id="hcFiltro" placeholder="Filtrar: pedido, LPN, código, usuario, motivo..." class="border border-slate-200 rounded-lg px-3 py-2 text-sm w-80">
+  <button id="hcCargar" type="button" class="px-3 py-2 text-sm font-semibold rounded-lg bg-slate-900 text-white">Actualizar</button>${bx('hcXls','Descargar XLS')}</div>
+  <p id="hcSt" class="text-xs text-slate-500"></p><div id="hcT" class="overflow-x-auto"></div></section>`);
+  let C={h:[],r:[]};
+  const vis=()=>{const f=$('hcFiltro').value.trim().toUpperCase();return f?C.r.filter(r=>r.join(' ').toUpperCase().includes(f)):C.r};
+  function pinta(){const r=vis();
+    $('hcT').innerHTML=r.length?'<table class="w-full text-xs"><thead><tr>'+C.h.map(x=>`<th class="${THc}">${esc(x)}</th>`).join('')+'</tr></thead><tbody class="divide-y divide-slate-100">'+r.slice(0,500).map(a=>'<tr>'+a.map((v,i)=>`<td class="px-2 py-1 ${i===2?'font-semibold':''} ${/ELIMINAR/.test(a[2])&&i===2?'text-rose-700':''}">${esc(v)}</td>`).join('')+'</tr>').join('')+'</tbody></table>':'';
+    $('hcXls').disabled=!r.length;stMsg('hc',r.length+' registro(s)'+(r.length>500?' · se muestran 500, el XLS lleva todos':'')+'.')}
+  async function cargar(){stMsg('hc','Consultando...');
+    try{if(!APPS_URL)throw new Error('Falta conectar el Sheet (APPS_URL vacía).');const j=await q2('hist_cambios');C={h:j.header,r:j.rows};pinta()}
+    catch(e){stMsg('hc','Error: '+e.message,true)}}
+  window.hcCargar=cargar;
+  $('hcCargar').onclick=cargar;$('hcFiltro').oninput=pinta;
+  $('hcXls').onclick=()=>{const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([C.h].concat(vis())),'CAMBIOS');XLSX.writeFile(wb,'HISTORIAL_CAMBIOS_LPN.xls',{bookType:'biff8'})};
+})();
+
+grupo('pedidos',[['view-regenerar','Reimpresión desde histórico','regDesde'],['view-etiquetas','Impresión de LPN','etqDesde'],['view-arum','Impresión LPN Aruma','arDesde'],['view-det','Detalle de pedido','detDesde'],['view-slpn','Detalle sin LPN','slFile'],['view-hdet','Histórico · editar líneas','hdP1'],['view-hcamb','Historial de cambios','hcFiltro',()=>{if(APPS_URL)window.hcCargar()}],['view-emp','Resumen de empaque','empDesde']]);
 grupo('saga',[['view-e1000','Etiqueta 1000','e1Desde'],['view-lpns','LPN Saga','lsDesde'],['view-datos','Catálogo y OC-Tienda',null,()=>{if(APPS_URL&&!DS.oc.rows.length&&!DS.catalogo.rows.length){dsCargar('catalogo');dsCargar('oc')}}],['view-precio','Etiqueta de precio','prDesde'],['view-imd','Impresión de detalle','imdDesde']]);
 
 // ---- Maestra de volumen (primera hoja del Sheet: IPROD / IVULI) ----
