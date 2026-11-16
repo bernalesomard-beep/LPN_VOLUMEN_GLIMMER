@@ -2313,7 +2313,7 @@ const nuevaVista=(id,html)=>{const v=document.createElement('div');v.id=id;v.cla
 (function(){
   const inp=(id,ph,w)=>`<input id="${id}" placeholder="${ph}" class="border border-slate-200 rounded-lg px-3 py-2 text-sm ${w||'w-32'}">`;
   nuevaVista('view-hdet',`<section class="${SEC}"><h3 class="font-bold text-slate-900">Detalle del histórico · editar líneas</h3>
-  <p class="text-xs text-slate-500">Busca por pedido o cliente (vacío = últimas líneas guardadas). Luego filtra al instante por orden, LPN, código o lote. Marca líneas para eliminarlas o cambia la cantidad en la fila; todo cambio exige motivo y queda en CAMBIOS_LPN.</p>
+  <p class="text-xs text-slate-500">Al abrir se ven las últimas 20 líneas guardadas; al buscar por pedido o cliente, o al usar cualquier filtro, se muestran todas las que coincidan. Luego filtra al instante por orden, LPN, código o lote. Marca líneas para eliminarlas o cambia la cantidad en la fila; todo cambio exige motivo y queda en CAMBIOS_LPN.</p>
   <div class="flex flex-wrap gap-2 items-center">${inp('hdPed','Pedido','w-36')}${inp('hdCli','Cliente','w-56')}
   <button id="hdBuscar" type="button" class="px-3 py-2 text-sm font-semibold rounded-lg bg-slate-900 text-white">Buscar</button></div>
   <div class="flex flex-wrap gap-2 items-center"><span class="text-xs font-semibold text-slate-500">Filtrar en pantalla:</span>${inp('hdOrd','Orden','w-28')}${inp('hdLpn','LPN','w-36')}${inp('hdCod','Código','w-36')}${inp('hdLote','Lote','w-28')}
@@ -2323,42 +2323,51 @@ const nuevaVista=(id,html)=>{const v=document.createElement('div');v.id=id;v.cla
   <p id="hdSt" class="text-xs text-slate-500"></p><div id="hdT" class="overflow-x-auto"></div></section>`);
   try{$('hdUser').value=localStorage.getItem('lpn_user')||''}catch(e){}
   $('hdUser').oninput=()=>{try{localStorage.setItem('lpn_user',$('hdUser').value)}catch(e){}};
-  const MAX=500;
   let R=[],H={},D=[],SEL=new Set(),QTY={},total=0;
   const val=(r,c)=>r[H[c]];
   const selIdx=()=>D.filter(i=>SEL.has(i));
   const modIdx=()=>D.filter(i=>i in QTY&&QTY[i]!==''&&!isNaN(+String(QTY[i]).replace(',','.'))&&num(QTY[i])!==num(val(R[i],'CANTIDAD')));
   const cuenta=()=>{const s=selIdx().length,m=modIdx().length;$('hdDel').textContent='Eliminar seleccionadas ('+s+')';$('hdDel').disabled=!s;$('hdMod').textContent='Guardar cantidades modificadas ('+m+')';$('hdMod').disabled=!m};
+  const CH=300;let RN=CH;
+  const fila=i=>{const r=R[i],q=i in QTY?QTY[i]:val(r,'CANTIDAD'),mo=modIdx().includes(i);
+    return `<tr><td class="px-2 py-1"><input type="checkbox" data-hd="${i}" ${SEL.has(i)?'checked':''} class="accent-red-600"></td><td class="px-2 font-mono">${esc(val(r,'ORDEN'))}</td><td class="px-2 font-mono">${esc(val(r,'PEDIDO'))}</td><td class="px-2 font-mono font-bold">${esc(val(r,'LPN'))}</td><td class="px-2 font-mono">${esc(val(r,'CODIGO'))}</td><td class="px-2 font-mono">${esc(val(r,'LOTE'))}</td><td class="px-2"><input data-hq="${i}" value="${esc(q)}" class="border border-slate-300 rounded px-2 py-1 w-20 text-right font-mono ${mo?'bg-amber-100':''}"></td><td class="px-2 text-slate-600">${esc(val(r,'CLIENTE'))}</td></tr>`};
   function pinta(){
     const f=id=>$(id).value.trim().toUpperCase(),fo=f('hdOrd'),fl=f('hdLpn'),fc=f('hdCod'),ft=f('hdLote'),has=(r,c,q)=>!q||String(val(r,c)).toUpperCase().includes(q);
     const V=R.map((r,i)=>i).filter(i=>{const r=R[i];return has(r,'ORDEN',fo)&&has(r,'LPN',fl)&&has(r,'CODIGO',fc)&&has(r,'LOTE',ft)});
-    D=V.slice(0,MAX);
-    $('hdT').innerHTML=D.length?'<table class="w-full text-xs"><thead><tr><th class="py-2 px-2 w-8"><input type="checkbox" id="hdTodos" class="accent-red-600"></th>'+['Orden','Pedido','LPN','Código','Lote','Cantidad','Cliente'].map(x=>`<th class="${THc}">${x}</th>`).join('')+'</tr></thead><tbody class="divide-y divide-slate-100">'+
-      D.map(i=>{const r=R[i],q=i in QTY?QTY[i]:val(r,'CANTIDAD'),mo=modIdx().includes(i);
-        return `<tr><td class="px-2 py-1"><input type="checkbox" data-hd="${i}" ${SEL.has(i)?'checked':''} class="accent-red-600"></td><td class="px-2 font-mono">${esc(val(r,'ORDEN'))}</td><td class="px-2 font-mono">${esc(val(r,'PEDIDO'))}</td><td class="px-2 font-mono font-bold">${esc(val(r,'LPN'))}</td><td class="px-2 font-mono">${esc(val(r,'CODIGO'))}</td><td class="px-2 font-mono">${esc(val(r,'LOTE'))}</td><td class="px-2"><input data-hq="${i}" value="${esc(q)}" class="border border-slate-300 rounded px-2 py-1 w-20 text-right font-mono ${mo?'bg-amber-100':''}"></td><td class="px-2 text-slate-600">${esc(val(r,'CLIENTE'))}</td></tr>`}).join('')+'</tbody></table>':'';
+    D=V;RN=CH;   // D = todas las líneas filtradas; en pantalla se dibujan por tandas al bajar (así no se pone lento)
+    $('hdT').innerHTML=D.length?'<table class="w-full text-xs"><thead class="sticky top-0 bg-white"><tr><th class="py-2 px-2 w-8"><input type="checkbox" id="hdTodos" class="accent-red-600"></th>'+['Orden','Pedido','LPN','Código','Lote','Cantidad','Cliente'].map(x=>`<th class="${THc}">${x}</th>`).join('')+'</tr></thead><tbody id="hdBody" class="divide-y divide-slate-100">'+D.slice(0,RN).map(fila).join('')+'</tbody></table>':'';
+    $('hdT').scrollTop=0;
     if(D.length){const t=$('hdTodos');t.checked=D.every(i=>SEL.has(i));
       t.onchange=e=>{D.forEach(i=>e.target.checked?SEL.add(i):SEL.delete(i));document.querySelectorAll('input[data-hd]').forEach(c=>c.checked=e.target.checked);cuenta()}}
-    if(R.length)stMsg('hd',V.length+' de '+R.length+' línea(s) cumplen los filtros'+(V.length>MAX?' · se muestran '+MAX:'')+(total>R.length?' · la búsqueda tiene '+total+' líneas, se traen '+R.length+': afina pedido o cliente':'')+'.');
+    if(R.length&&PARCIAL){stMsg('hd','Últimas '+R.length+' líneas guardadas. Busca por pedido o cliente, o usa un filtro, para ver todas.');cuenta();return}
+    if(R.length)stMsg('hd',V.length+' de '+R.length+' línea(s) cumplen los filtros'+(total>R.length?' · la búsqueda tiene '+total+' líneas y se traen '+R.length+': afina pedido o cliente':'')+'.');
     cuenta()}
   $('hdT').onchange=$('hdT').oninput=e=>{const d=e.target.dataset;if(!d)return;
     if(d.hd!==undefined){e.target.checked?SEL.add(+d.hd):SEL.delete(+d.hd)}
     if(d.hq!==undefined){QTY[+d.hq]=e.target.value;e.target.classList.toggle('bg-amber-100',modIdx().includes(+d.hq))}
     cuenta()};
-  ['hdOrd','hdLpn','hdCod','hdLote'].forEach(id=>$(id).oninput=pinta);
+  let tmr=null;
+  ['hdOrd','hdLpn','hdCod','hdLote'].forEach(id=>$(id).oninput=()=>{
+    if(PARCIAL&&['hdOrd','hdLpn','hdCod','hdLote'].some(i=>$(i).value.trim())){clearTimeout(tmr);tmr=setTimeout(()=>buscar(),350);return}   // primer filtro real: se trae todo el detalle
+    pinta()});
+  $('hdT').style.maxHeight='32rem';$('hdT').style.overflowY='auto';
+  $('hdT').onscroll=e=>{const t=e.target;if(RN<D.length&&t.scrollTop+t.clientHeight>=t.scrollHeight-300){const n=D.slice(RN,RN+CH);RN+=n.length;$('hdBody').insertAdjacentHTML('beforeend',n.map(fila).join(''))}};
   $('hdLimpia').onclick=()=>{['hdOrd','hdLpn','hdCod','hdLote'].forEach(id=>$(id).value='');pinta()};
-  async function buscar(){
+  let PARCIAL=false;   // true = solo se cargaron las últimas 20 líneas; al aplicar un filtro se trae todo
+  async function buscar(corta){
     R=[];D=[];SEL=new Set();QTY={};$('hdT').innerHTML='';cuenta();
     try{
       if(!APPS_URL)throw new Error('Falta conectar el Sheet (APPS_URL vacía).');
       const p=[];if($('hdPed').value.trim())p.push('ped='+encodeURIComponent($('hdPed').value.trim()));if($('hdCli').value.trim())p.push('cliente='+encodeURIComponent($('hdCli').value.trim()));
+      if(corta===true&&!p.length)p.push('limite=20');PARCIAL=p.indexOf('limite=20')>=0;
       stMsg('hd','Consultando...');
       const j=await q2('hist_det'+(p.length?'&'+p.join('&'):''));H={};j.header.forEach((c,i)=>H[c]=i);R=j.rows;total=+j.total||R.length;
       if(!R.length){stMsg('hd','No hay líneas con esa búsqueda.');return}
       pinta();
     }catch(e){stMsg('hd','Error: '+e.message,true)}
     cuenta()}
-  window.hdBuscar=buscar;
-  $('hdBuscar').onclick=buscar;
+  window.hdBuscar=()=>buscar(true);
+  $('hdBuscar').onclick=()=>buscar();
   [$('hdPed'),$('hdCli')].forEach(i=>i.onkeydown=e=>{if(e.key==='Enter')buscar()});
   async function enviar(cambios,txt){
     const motivo=$('hdMotivo').value.trim(),usuario=$('hdUser').value.trim();
