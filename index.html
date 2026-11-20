@@ -431,6 +431,16 @@
                 <p class="mt-2 text-xs text-slate-400 leading-snug">Reglas de Saga, máximo 12 códigos distintos por LPN y cada LPN se llena al 100% de la caja. Prefijo + Id LPN + correlativo de 6 dígitos.</p>
               </div>
             </label>
+            <label class="relative block cursor-pointer">
+              <input type="radio" name="metodo" value="tienda26" class="peer sr-only">
+              <div class="opt-card h-full rounded-xl border border-slate-700 bg-slate-800/60 p-4 hover:border-slate-500 peer-checked:border-brand-500 peer-checked:bg-brand-700/15 peer-checked:ring-2 peer-checked:ring-brand-500/40 peer-focus-visible:ring-2 peer-focus-visible:ring-white/60">
+                <div class="flex items-start justify-between gap-2">
+                  <span class="text-sm font-bold text-white leading-tight">Tienda 26</span>
+                  <span class="shrink-0 px-1.5 py-0.5 rounded font-mono text-xs font-bold bg-slate-700 text-slate-200">Ripley</span>
+                </div>
+                <p class="mt-2 text-xs text-slate-400 leading-snug">Un código por LPN (código por caja). Si el código tiene caja master, 1 LPN por cada caja master. Prefijo + Id LPN + correlativo de 6 dígitos.</p>
+              </div>
+            </label>
           </div>
         </div>
         <div>
@@ -1018,7 +1028,7 @@ $('fPed').onchange=async e=>{const f=e.target.files[0];if(!f)return;
 
 // ---- Criterios por cliente y series de LPN ----
 const NP=p=>(p==='20614043271'||p==='DBS')?7:6; // largo del correlativo: Saga = 7 dígitos (LPN de 18), DBS = 7 dígitos (DBS0000001), el resto 6
-const DIN={ripley12:1}; // criterios con prefijo escrito a mano (prefijo + Id LPN, ej. NC0019027); su serie se guarda por ese prefijo
+const DIN={ripley12:1,tienda26:1}; // criterios con prefijo escrito a mano (prefijo + Id LPN, ej. NC0019027); su serie se guarda por ese prefijo
 const dinPre=()=>$('pre').value.trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
 const PREF={aruma_vol:'TA',aruma_cl:'TA',inretail:'IP',saga:'20614043271',saga20:'20614043271',tienda1000:'20614043271'}; // DBS no usa serie: su LPN es OC-NN
 const AYUDA={
@@ -1034,6 +1044,7 @@ const AYUDA={
   inretail:'InRetail · por volumen. Un código con el mismo lote no se separa en cajas distintas, salvo cajas master. Serie IP000001.',
   saga:'Saga · por volumen. Un código con lotes distintos no comparte caja. Serie 206140432710000001.',
   ripley12:'Ripley · mismas reglas de Saga con máximo 12 códigos distintos por LPN (cada LPN se llena al 100% del volumen de la caja). Escribe el prefijo + Id LPN (ej. NC0019027); el correlativo de 6 dígitos parte de 1 para cada Id LPN nuevo. LPN final: NC0019027000001.',
+  tienda26:'Tienda 26 (Ripley) · mismos criterios que Tienda 1000 de Saga: un código por LPN (código por caja). Con «Cajas master completas» activo, cada caja master completa es 1 LPN. Un código con lotes distintos no comparte LPN. Escribe el prefijo + Id LPN (ej. NC0019027); el correlativo de 6 dígitos parte de 1 para cada Id LPN nuevo.',
   saga20:'Saga · mismas reglas de Saga (volumen, un código con lotes distintos no comparte caja) y máximo 20 códigos distintos por LPN. Cada LPN se llena como máximo al 85% del volumen de la caja. Serie 206140432710000001.'
 };
 let LASTS={},PRE_LIBRE='',FIJO='',DBSOC=false; // DBSOC: el LPN es OC-NN (sin serie ni correlativo)
@@ -1044,7 +1055,7 @@ function aplicarModo(){
   const m=modo(),dyn=!!DIN[m];
   if(dyn&&$('pre').disabled){$('pre').value='';$('pre').disabled=false}
   const p=PREF[m]||(dyn?dinPre():'');
-  $('boxMaster').classList.toggle('hide',!(m==='inretail'||m==='saga'||m==='saga20'||m==='ripley12'||m==='tienda1000'));
+  $('boxMaster').classList.toggle('hide',!(m==='inretail'||m==='saga'||m==='saga20'||m==='ripley12'||m==='tienda1000'||m==='tienda26'));
   $('metodoAyuda').textContent=AYUDA[m]||'';
   if(m.startsWith('dbs')){ // DBS: LPN = OC-NN, sin prefijo ni correlativo
     if(!$('pre').disabled)PRE_LIBRE=$('pre').value;$('pre').value='';$('pre').disabled=true;$('ini').value=1;
@@ -1077,8 +1088,8 @@ function calcular(){
   DBSOC=DBS;
   if(DBS&&!DS.oc_dbs.rows.length){alert('Carga primero la OC-TIENDA DBS (pestaña DBS > OC-Tienda DBS): el LPN se arma con la OC.');return}
   const cap=num($('cap').value),pre=DBS?'':(fijo||$('pre').value.trim()),E=1e-9;
-  const metodo=(m0==='codlote'||m0==='aruma_cl'||m0==='dbs_cl')?'codlote':(m0==='inretail')?'inretail':(m0==='saga'||m0==='saga20'||m0==='ripley12'||m0==='tienda1000')?'saga':'volumen';
-  const maxCod=(m0==='saga20'||m0==='volumen20'||m0==='dbs20')?20:m0==='ripley12'?12:m0==='tienda1000'?1:0; // Tienda 1000: un código por LPN
+  const metodo=(m0==='codlote'||m0==='aruma_cl'||m0==='dbs_cl')?'codlote':(m0==='inretail')?'inretail':(m0==='saga'||m0==='saga20'||m0==='ripley12'||m0==='tienda1000'||m0==='tienda26')?'saga':'volumen';
+  const maxCod=(m0==='saga20'||m0==='volumen20'||m0==='dbs20')?20:m0==='ripley12'?12:(m0==='tienda1000'||m0==='tienda26')?1:0; // Tienda 1000: un código por LPN
   const capL=m0==='saga20'?cap*0.85:cap; // Saga 20: cada LPN se llena como máximo al 85% de la caja
   let ini=Math.max(1,parseInt($('ini').value)||1);
   LPNS=[];ERR=[];
